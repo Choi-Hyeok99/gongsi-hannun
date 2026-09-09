@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { logout } from "@/app/auth/actions";
+import { createSupabaseServerClient } from "@/server/supabase/server";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <header className="site-header">
       <div className="content-container site-header__inner">
@@ -11,6 +16,14 @@ export function SiteHeader() {
         <nav aria-label="주요 메뉴">
           <Link href="/search?query=삼성">기업</Link>
           <Link href="/disclosures">오늘의 주요 공시</Link>
+          {user ? (
+            <form action={logout} className="auth-nav">
+              <span title={user.email}>{user.email}</span>
+              <button type="submit">로그아웃</button>
+            </form>
+          ) : (
+            <span className="auth-nav"><Link href="/login">로그인</Link><Link className="nav-signup" href="/signup">회원가입</Link></span>
+          )}
         </nav>
       </div>
     </header>

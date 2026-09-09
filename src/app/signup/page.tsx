@@ -1,0 +1,35 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { signUp } from "@/app/auth/actions";
+import { AuthMessage } from "@/components/AuthMessage";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
+
+export const metadata: Metadata = { title: "회원가입 | 공시한눈" };
+type Props = Readonly<{ searchParams: Promise<{ error?: string; message?: string }> }>;
+
+export default async function SignUpPage({ searchParams }: Props) {
+  const parameters = await searchParams;
+  return (
+    <div className="site-shell">
+      <SiteHeader />
+      <main className="content-container auth-page">
+        <section className="auth-card" aria-labelledby="signup-heading">
+          <p className="eyebrow">공시한눈 시작하기</p>
+          <h1 id="signup-heading">회원가입</h1>
+          <p className="auth-description">이메일 인증 후 서비스를 이용할 수 있습니다.</p>
+          <AuthMessage error={parameters.error} message={parameters.message} />
+          <form className="auth-form" action={signUp}>
+            <label>이메일<input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
+            <label>비밀번호<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={72} aria-describedby="password-help" /></label>
+            <small id="password-help">12자 이상 72자 이하로 입력해 주세요.</small>
+            <label>비밀번호 확인<input name="passwordConfirmation" type="password" autoComplete="new-password" required minLength={12} maxLength={72} /></label>
+            <button type="submit">인증 메일 받기</button>
+          </form>
+          <div className="auth-links"><span>이미 계정이 있나요?</span><Link href="/login">로그인</Link></div>
+        </section>
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}
