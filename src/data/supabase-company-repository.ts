@@ -33,6 +33,6 @@ export class SupabaseCompanyRepository implements CompanyRepository {
 
 export function createCompanyRepository(): CompanyRepository {
   const env = readServerEnvironment();
-  const client = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const client = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   return new SupabaseCompanyRepository(client);
 }
