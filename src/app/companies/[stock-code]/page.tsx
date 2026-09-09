@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DisclosureList } from "@/components/DisclosureList";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createCompanyRepository } from "@/data/supabase-company-repository";
+import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
 import { getCompany } from "@/server/company-use-cases";
+import { listCompanyDisclosures } from "@/server/disclosure-use-cases";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +43,7 @@ export default async function CompanyPage({ params }: Props) {
     );
   }
 
+  const disclosures = await listCompanyDisclosures(createDisclosureRepository(), stockCode, 10);
   const market = company.market === "OTHER" ? "시장 분류 준비 중" : company.market;
   return (
     <div className="site-shell">
@@ -82,11 +86,9 @@ export default async function CompanyPage({ params }: Props) {
               <p className="eyebrow">공시 타임라인</p>
               <h2 id="disclosure-heading">최근 주요 공시</h2>
             </div>
+            <Link className="text-link" href="/disclosures">전체 공시 보기</Link>
           </div>
-          <div className="empty-state">
-            <strong>아직 수집된 공시가 없습니다.</strong>
-            <p>다음 단계에서 OpenDART 공시 수집기를 연결하면 이곳에 실제 공시가 표시됩니다.</p>
-          </div>
+          <DisclosureList disclosures={disclosures} emptyMessage="최근 수집된 기업 공시가 없습니다." />
         </section>
       </main>
       <SiteFooter />
