@@ -3,17 +3,30 @@ import type { Company, CompanyRepository } from "@/domain/company";
 import { InvalidInputError } from "@/domain/errors";
 import { getCompany, searchCompanies } from "@/server/company-use-cases";
 
-const sample: Company = { id: "company-1", dartCorpCode: "00126380", stockCode: "005930", nameKo: "삼성전자", market: "KOSPI", sector: "반도체" };
+const sample: Company = { id: "company-1", dartCorpCode: "00126380", stockCode: "005930", nameKo: "삼성전자", market: "KOSPI", sector: "반도체", industryCategory: "SEMICONDUCTOR" };
 
 class FixtureCompanyRepository implements CompanyRepository {
-  async search(query: string): Promise<readonly Company[]> { return sample.nameKo.includes(query) || sample.stockCode === query ? [sample] : []; }
+  async search(query: string, _limit: number, category?: Company["industryCategory"]): Promise<readonly Company[]> {
+    const matchesQuery = sample.nameKo.includes(query) || sample.stockCode === query;
+    return matchesQuery && (!category || category === sample.industryCategory) ? [sample] : [];
+  }
   async findByStockCode(stockCode: string): Promise<Company | null> { return stockCode === sample.stockCode ? sample : null; }
 }
 
 describe("searchCompanies", () => {
   const repository = new FixtureCompanyRepository();
-  it("returns only public fields", async () => { await expect(searchCompanies(repository, "삼성")).resolves.toEqual([{ stockCode: "005930", name: "삼성전자", market: "KOSPI", sector: "반도체" }]); });
+  it("returns canonical category fields", async () => { await expect(searchCompanies(repository, "삼성")).resolves.toEqual([{ stockCode: "005930", name: "삼성전자", market: "KOSPI", sector: "반도체", industryCategory: "SEMICONDUCTOR", industryCategoryLabel: "반도체" }]); });
   it("accepts a six digit stock code", async () => { await expect(searchCompanies(repository, "005930")).resolves.toHaveLength(1); });
+  it("filters by a canonical industry category", async () => {
+    await expect(searchCompanies(repository, "삼성", "SEMICONDUCTOR")).resolves.toHaveLength(1);
+    await expect(searchCompanies(repository, "삼성", "FINANCE")).resolves.toHaveLength(0);
+  });
+  it("allows category-only browsing", async () => {
+    await expect(searchCompanies(repository, null, "SEMICONDUCTOR")).resolves.toHaveLength(1);
+  });
+  it("rejects an unknown industry category", async () => {
+    await expect(searchCompanies(repository, "삼성", "MADE_UP")).rejects.toBeInstanceOf(InvalidInputError);
+  });
   it("rejects invalid numeric codes", async () => { await expect(searchCompanies(repository, "5930")).rejects.toBeInstanceOf(InvalidInputError); });
   it("rejects an empty query", async () => { await expect(searchCompanies(repository, " ")).rejects.toBeInstanceOf(InvalidInputError); });
 });

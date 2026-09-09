@@ -46,7 +46,6 @@ export class SupabaseCompanySyncRepository implements CompanySyncRepository {
         name_ko: company.nameKo,
         name_en: company.nameEn,
         market: "OTHER",
-        sector: null,
         is_listed: true,
         is_active: true,
         source_updated_at: `${company.sourceUpdatedOn}T00:00:00+09:00`,
