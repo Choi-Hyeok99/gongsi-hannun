@@ -13,7 +13,7 @@ const validXml = `<?xml version="1.0" encoding="UTF-8"?>
   </list>
   <list>
     <corp_code>00000001</corp_code>
-    <corp_name>비상장회사</corp_name>
+    <corp_name>비상장&amp;회사</corp_name>
     <corp_eng_name></corp_eng_name>
     <stock_code></stock_code>
     <modify_date>20260908</modify_date>
@@ -36,7 +36,7 @@ describe("OpenDartCompanyClient", () => {
       },
       {
         dartCorpCode: "00000001",
-        nameKo: "비상장회사",
+        nameKo: "비상장&회사",
         nameEn: null,
         stockCode: null,
         sourceUpdatedOn: "2026-09-08",
