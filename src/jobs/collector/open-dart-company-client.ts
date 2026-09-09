@@ -137,13 +137,22 @@ function parseCompanyDirectory(xml: string): readonly CompanyDirectoryRecord[] {
     const stockCode = /^[0-9]{6}$/.test(company.stock_code) ? company.stock_code : null;
     unique.set(company.corp_code, {
       dartCorpCode: company.corp_code,
-      nameKo: company.corp_name,
-      nameEn: company.corp_eng_name || null,
+      nameKo: decodeXmlText(company.corp_name),
+      nameEn: company.corp_eng_name ? decodeXmlText(company.corp_eng_name) : null,
       stockCode,
       sourceUpdatedOn: formatDate(company.modify_date),
     });
   }
   return [...unique.values()];
+}
+
+function decodeXmlText(value: string): string {
+  return value
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&amp;", "&");
 }
 
 function throwOpenDartXmlError(bytes: Uint8Array): never {
