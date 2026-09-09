@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AuthMessage } from "@/components/AuthMessage";
 import { DisclosureList } from "@/components/DisclosureList";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { WatchlistButton } from "@/components/WatchlistButton";
 import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
+import { createWatchlistCompanyReader } from "@/data/supabase-watchlist-company-reader";
+import { SupabaseWatchlistRepository } from "@/data/supabase-watchlist-repository";
 import { getCompany } from "@/server/company-use-cases";
 import { listCompanyDisclosures } from "@/server/disclosure-use-cases";
+import { createSupabaseServerClient } from "@/server/supabase/server";
+import { getSavedState } from "@/server/watchlist-use-cases";
 
 export const dynamic = "force-dynamic";
 
 type Props = Readonly<{
   params: Promise<{ "stock-code": string }>;
+  searchParams: Promise<{ error?: string; message?: string }>;
 }>;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -23,8 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function CompanyPage({ params }: Props) {
+export default async function CompanyPage({ params, searchParams }: Props) {
   const { "stock-code": stockCode } = await params;
+  const status = await searchParams;
   const company = await getCompany(createCompanyRepository(), stockCode);
 
   if (!company) {
@@ -43,7 +51,15 @@ export default async function CompanyPage({ params }: Props) {
     );
   }
 
-  const disclosures = await listCompanyDisclosures(createDisclosureRepository(), stockCode, 10);
+  const [disclosures, supabase] = await Promise.all([
+    listCompanyDisclosures(createDisclosureRepository(), stockCode, 10),
+    createSupabaseServerClient(),
+  ]);
+  const { data: { user } } = await supabase.auth.getUser();
+  const watchlistCompany = user ? await createWatchlistCompanyReader().findByStockCode(stockCode) : null;
+  const isSaved = user && watchlistCompany
+    ? await getSavedState(new SupabaseWatchlistRepository(supabase), user.id, watchlistCompany.id)
+    : false;
   const market = company.market === "OTHER" ? "시장 분류 준비 중" : company.market;
   return (
     <div className="site-shell">
@@ -51,12 +67,16 @@ export default async function CompanyPage({ params }: Props) {
       <main className="content-container page-content">
         <div className="breadcrumb"><Link href="/">홈</Link><span>/</span><Link href={`/search?query=${encodeURIComponent(company.name)}`}>기업</Link><span>/</span><span>{company.name}</span></div>
 
+        <AuthMessage error={status.error} message={status.message} />
         <section className="company-hero">
           <span className="company-avatar company-avatar--hero" aria-hidden="true">{company.name.slice(0, 1)}</span>
           <div>
             <p className="eyebrow">기업 정보</p>
             <h1>{company.name}</h1>
             <p>{company.stockCode} · {market}</p>
+          </div>
+          <div className="company-hero__action">
+            <WatchlistButton stockCode={stockCode} isAuthenticated={Boolean(user)} isSaved={isSaved} />
           </div>
         </section>
 
