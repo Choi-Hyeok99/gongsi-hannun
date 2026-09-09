@@ -1,21 +1,50 @@
 export const DISCLOSURE_CLASSIFICATION_VERSION = "report-name-v1";
 
-export type DisclosureEventType =
-  | "SUPPLY_CONTRACT"
-  | "INVESTMENT"
-  | "FUNDRAISING"
-  | "M_AND_A"
-  | "EARNINGS"
-  | "CAPITAL_CHANGE"
-  | "SHAREHOLDER_CHANGE"
-  | "INSIDER_OWNERSHIP_CHANGE"
-  | "FACILITY_EXPANSION"
-  | "NEW_BUSINESS"
-  | "CLINICAL_RESULT"
-  | "POLICY_SUPPORT"
-  | "MANAGEMENT_CHANGE"
-  | "MATERIAL_DISCLOSURE"
-  | "OTHER";
+export const DISCLOSURE_EVENT_TYPES = [
+  "SUPPLY_CONTRACT",
+  "INVESTMENT",
+  "FUNDRAISING",
+  "M_AND_A",
+  "EARNINGS",
+  "CAPITAL_CHANGE",
+  "SHAREHOLDER_CHANGE",
+  "INSIDER_OWNERSHIP_CHANGE",
+  "FACILITY_EXPANSION",
+  "NEW_BUSINESS",
+  "CLINICAL_RESULT",
+  "POLICY_SUPPORT",
+  "MANAGEMENT_CHANGE",
+  "MATERIAL_DISCLOSURE",
+  "OTHER",
+] as const;
+
+export type DisclosureEventType = (typeof DISCLOSURE_EVENT_TYPES)[number];
+
+const EVENT_TYPE_LABELS: Readonly<Record<DisclosureEventType, string>> = {
+  SUPPLY_CONTRACT: "공급계약",
+  INVESTMENT: "투자",
+  FUNDRAISING: "자금조달",
+  M_AND_A: "인수·합병",
+  EARNINGS: "실적",
+  CAPITAL_CHANGE: "자본변동",
+  SHAREHOLDER_CHANGE: "주주변동",
+  INSIDER_OWNERSHIP_CHANGE: "임원·주요주주",
+  FACILITY_EXPANSION: "시설투자",
+  NEW_BUSINESS: "신규사업",
+  CLINICAL_RESULT: "임상·허가",
+  POLICY_SUPPORT: "정책지원",
+  MANAGEMENT_CHANGE: "경영변동",
+  MATERIAL_DISCLOSURE: "주요경영사항",
+  OTHER: "기타",
+};
+
+export function isDisclosureEventType(value: string | null): value is DisclosureEventType {
+  return DISCLOSURE_EVENT_TYPES.some((eventType) => eventType === value);
+}
+
+export function getDisclosureEventTypeLabel(eventType: DisclosureEventType): string {
+  return EVENT_TYPE_LABELS[eventType];
+}
 
 export type DisclosureClassification = Readonly<{
   eventType: DisclosureEventType;
@@ -95,7 +124,7 @@ const RULES: readonly ClassificationRule[] = [
     eventType: "MANAGEMENT_CHANGE",
     score: 60,
     reason: "경영진 또는 회사 운영의 중대한 변화에 관한 공시입니다.",
-    keywords: ["대표이사변경", "경영권변경", "회생절차", "파산신청", "해산사유", "영업정지"],
+    keywords: ["대표이사변경", "회생절차", "파산신청", "해산사유", "영업정지"],
   },
   {
     id: "shareholder-change",
