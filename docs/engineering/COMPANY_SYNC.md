@@ -3,8 +3,16 @@
 ## Status
 
 - ZIP download, XML parsing, response size limits, ZIP expansion limits, listed-company filtering, idempotent upsert, and ingestion-run logging are implemented.
-- A real run is blocked only by the local `OPENDART_API_KEY`.
+- The local OpenDART key is configured in the ignored `.env.local` file.
 - The OpenDART corporation-code file does not include market or sector. New rows are therefore stored as `OTHER` with no sector instead of guessing.
+
+## Run log
+
+| Date (KST) | Source rows | Listed companies created | Updated | Failed | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 2026-09-09 | 119,039 | 3,931 | 0 | 0 | Succeeded |
+
+Sample verification passed for Samsung Electronics, SK hynix, NAVER, and Kakao by stock code.
 
 ## Run
 
