@@ -114,6 +114,10 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .company-hero { display: flex; align-items: center; gap: 22px; padding: 28px 0 38px; }
 .company-hero h1 { font-size: clamp(32px, 5vw, 46px); }
 .company-hero p:last-child { margin: 7px 0 0; color: var(--muted); }
+.company-hero__action { margin-left: auto; }
+.watchlist-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 9px 16px; border: 1px solid #9fc1ef; border-radius: 11px; color: var(--primary); background: white; font-weight: 800; cursor: pointer; }
+.watchlist-button:hover { border-color: var(--primary); background: var(--surface-soft); }
+.watchlist-button--saved { color: #9a6700; border-color: #f1c75b; background: #fffbea; }
 .detail-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr); gap: 18px; }
 .info-card { padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: 0 7px 24px rgba(31, 49, 77, 0.05); }
 .info-card--accent { border-color: #cfe2fb; background: var(--surface-soft); }
@@ -207,6 +211,9 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   .page-content { padding-top: 22px; padding-bottom: 52px; }
   .breadcrumb { margin-bottom: 24px; }
   .company-hero { align-items: flex-start; }
+  .company-hero { flex-wrap: wrap; }
+  .company-hero__action { width: 100%; margin-left: 0; }
+  .watchlist-button { width: 100%; }
   .company-avatar--hero { width: 60px; height: 60px; border-radius: 18px; }
   .company-facts div { grid-template-columns: 86px minmax(0, 1fr); gap: 12px; }
   .disclosure-card { grid-template-columns: 1fr auto; gap: 8px 12px; padding: 16px; }

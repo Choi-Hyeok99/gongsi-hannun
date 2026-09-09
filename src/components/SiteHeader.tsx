@@ -17,12 +17,15 @@ export async function SiteHeader() {
           <Link href="/search?query=삼성">기업</Link>
           <Link href="/disclosures">오늘의 주요 공시</Link>
           {user ? (
-            <form action={logout} className="auth-nav">
-              <span title={user.email}>{user.email}</span>
-              <button type="submit">로그아웃</button>
-            </form>
+            <div className="auth-nav">
+              <Link href="/watchlist">관심기업</Link>
+              <form action={logout} className="auth-nav">
+                <span title={user.email}>{user.email}</span>
+                <button type="submit">로그아웃</button>
+              </form>
+            </div>
           ) : (
-            <span className="auth-nav"><Link href="/login">로그인</Link><Link className="nav-signup" href="/signup">회원가입</Link></span>
+            <div className="auth-nav"><Link href="/login">로그인</Link><Link className="nav-signup" href="/signup">회원가입</Link></div>
           )}
         </nav>
       </div>
