@@ -1,7 +1,12 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Market } from "@/domain/company";
-import type { DisclosureRepository, DisclosureSummary } from "@/domain/disclosure-query";
+import type {
+  DisclosureRepository,
+  DisclosureSearch,
+  DisclosureSearchResult,
+  DisclosureSummary,
+} from "@/domain/disclosure-query";
 import { DataAccessError } from "@/domain/errors";
 import { readServerEnvironment } from "@/server/env";
 
@@ -49,6 +54,24 @@ export class SupabaseDisclosureRepository implements DisclosureRepository {
       .limit(limit);
     if (error) throw new DataAccessError("최근 공시를 조회하지 못했습니다.");
     return (data as unknown as DisclosureRow[]).map(mapDisclosure);
+  }
+
+  async search(query: DisclosureSearch): Promise<DisclosureSearchResult> {
+    const from = (query.page - 1) * query.pageSize;
+    const to = from + query.pageSize - 1;
+    let request = this.client
+      .from("source_disclosures")
+      .select(SELECTION, { count: "exact" })
+      .order("disclosed_on", { ascending: false })
+      .order("receipt_no", { ascending: false })
+      .range(from, to);
+    if (query.date) request = request.eq("disclosed_on", query.date);
+    const { data, error, count } = await request;
+    if (error) throw new DataAccessError("공시 목록을 조회하지 못했습니다.");
+    return {
+      items: (data as unknown as DisclosureRow[]).map(mapDisclosure),
+      totalCount: count ?? 0,
+    };
   }
 
   async findByReceiptNumber(receiptNumber: string): Promise<DisclosureSummary | null> {

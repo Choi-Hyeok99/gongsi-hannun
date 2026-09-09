@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DisclosureRepository, DisclosureSummary } from "@/domain/disclosure-query";
-import { getDisclosure, listCompanyDisclosures, listLatestDisclosures } from "@/server/disclosure-use-cases";
+import { getDisclosure, listCompanyDisclosures, listLatestDisclosures, searchDisclosures } from "@/server/disclosure-use-cases";
 
 const sample: DisclosureSummary = {
   receiptNumber: "20260909000001",
@@ -14,6 +14,9 @@ const sample: DisclosureSummary = {
 
 class FixtureDisclosureRepository implements DisclosureRepository {
   async findLatest(): Promise<readonly DisclosureSummary[]> { return [sample]; }
+  async search(): Promise<{ items: readonly DisclosureSummary[]; totalCount: number }> {
+    return { items: [sample], totalCount: 1 };
+  }
   async findByReceiptNumber(receiptNumber: string): Promise<DisclosureSummary | null> {
     return receiptNumber === sample.receiptNumber ? sample : null;
   }
@@ -27,6 +30,22 @@ describe("disclosure use cases", () => {
 
   it("lists latest disclosures", async () => {
     await expect(listLatestDisclosures(repository, 8)).resolves.toEqual([sample]);
+  });
+
+  it("normalizes disclosure search parameters", async () => {
+    await expect(searchDisclosures(repository, "2026-09-09", "2")).resolves.toMatchObject({
+      date: "2026-09-09",
+      page: 2,
+      pageSize: 30,
+      totalCount: 1,
+    });
+  });
+
+  it("falls back for invalid disclosure search parameters", async () => {
+    await expect(searchDisclosures(repository, "2026-02-31", "-1")).resolves.toMatchObject({
+      date: null,
+      page: 1,
+    });
   });
 
   it("does not query an invalid receipt number", async () => {
