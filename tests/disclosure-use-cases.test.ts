@@ -9,6 +9,7 @@ const sample: DisclosureSummary = {
   disclosedOn: "2026-09-09",
   originalUrl: "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260909000001",
   status: "ACTIVE",
+  eventType: "SUPPLY_CONTRACT",
   company: { stockCode: "005930", name: "삼성전자", market: "KOSPI" },
 };
 
@@ -33,17 +34,35 @@ describe("disclosure use cases", () => {
   });
 
   it("normalizes disclosure search parameters", async () => {
-    await expect(searchDisclosures(repository, "2026-09-09", "2")).resolves.toMatchObject({
+    const search = vi.spyOn(repository, "search");
+    await expect(searchDisclosures(
+      repository,
+      "2026-09-09",
+      "2",
+      "SUPPLY_CONTRACT",
+      " 삼성전자,() % ",
+    )).resolves.toMatchObject({
       date: "2026-09-09",
+      eventType: "SUPPLY_CONTRACT",
+      term: "삼성전자",
       page: 2,
       pageSize: 30,
       totalCount: 1,
     });
+    expect(search).toHaveBeenLastCalledWith({
+      date: "2026-09-09",
+      eventType: "SUPPLY_CONTRACT",
+      term: "삼성전자",
+      page: 2,
+      pageSize: 30,
+    });
   });
 
   it("falls back for invalid disclosure search parameters", async () => {
-    await expect(searchDisclosures(repository, "2026-02-31", "-1")).resolves.toMatchObject({
+    await expect(searchDisclosures(repository, "2026-02-31", "-1", "UNKNOWN", "***")).resolves.toMatchObject({
       date: null,
+      eventType: null,
+      term: null,
       page: 1,
     });
   });

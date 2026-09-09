@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
+import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
 import { getDisclosure } from "@/server/disclosure-use-cases";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             <Link href={`/companies/${disclosure.company.stockCode}`}>{disclosure.company.name} · {disclosure.company.market}</Link>
           </div>
           <dl className="company-facts">
+            <div><dt>공시 유형</dt><dd>{getDisclosureEventTypeLabel(disclosure.eventType)}</dd></div>
             <div><dt>공시일</dt><dd>{disclosure.disclosedOn}</dd></div>
             <div><dt>제출인</dt><dd>{disclosure.filerName ?? disclosure.company.name}</dd></div>
             <div><dt>접수번호</dt><dd>{disclosure.receiptNumber}</dd></div>

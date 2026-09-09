@@ -3,6 +3,7 @@ import type {
   DisclosureSearchResult,
   DisclosureSummary,
 } from "@/domain/disclosure-query";
+import { isDisclosureEventType, type DisclosureEventType } from "@/domain/disclosure-classification";
 
 const RECEIPT_NUMBER = /^[0-9]{14}$/;
 
@@ -17,13 +18,33 @@ export async function searchDisclosures(
   repository: DisclosureRepository,
   rawDate: string | null,
   rawPage: string | null,
-): Promise<DisclosureSearchResult & { date: string | null; page: number; pageSize: number }> {
+  rawEventType: string | null = null,
+  rawTerm: string | null = null,
+): Promise<DisclosureSearchResult & {
+  date: string | null;
+  eventType: DisclosureEventType | null;
+  term: string | null;
+  page: number;
+  pageSize: number;
+}> {
   const date = isValidDate(rawDate) ? rawDate : null;
+  const eventType = isDisclosureEventType(rawEventType) ? rawEventType : null;
+  const term = normalizeSearchTerm(rawTerm);
   const parsedPage = Number(rawPage);
   const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, 500) : 1;
   const pageSize = 30;
-  const result = await repository.search({ date, page, pageSize });
-  return { ...result, date, page, pageSize };
+  const result = await repository.search({ date, eventType, term, page, pageSize });
+  return { ...result, date, eventType, term, page, pageSize };
+}
+
+function normalizeSearchTerm(value: string | null): string | null {
+  const normalized = value
+    ?.normalize("NFKC")
+    .replace(/[,()%_*'"\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+  return normalized || null;
 }
 
 function isValidDate(value: string | null): value is string {

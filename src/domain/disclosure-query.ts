@@ -1,4 +1,5 @@
 import type { Market } from "@/domain/company";
+import type { DisclosureEventType } from "@/domain/disclosure-classification";
 
 export type DisclosureSummary = Readonly<{
   receiptNumber: string;
@@ -7,6 +8,7 @@ export type DisclosureSummary = Readonly<{
   disclosedOn: string;
   originalUrl: string;
   status: "ACTIVE" | "CORRECTED" | "CANCELLED" | "REVIEW_REQUIRED";
+  eventType: DisclosureEventType;
   company: Readonly<{
     stockCode: string;
     name: string;
@@ -16,6 +18,8 @@ export type DisclosureSummary = Readonly<{
 
 export type DisclosureSearch = Readonly<{
   date: string | null;
+  eventType: DisclosureEventType | null;
+  term: string | null;
   page: number;
   pageSize: number;
 }>;
