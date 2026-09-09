@@ -36,3 +36,24 @@ export interface DailyPriceSyncRepository {
   completeRun(runId: string, counts: DailyPriceSyncCounts): Promise<void>;
   failRun(runId: string, readCount: number, error: unknown): Promise<void>;
 }
+
+export const DAILY_PRICE_PERIODS = ["1M", "3M", "1Y"] as const;
+export type DailyPricePeriod = (typeof DAILY_PRICE_PERIODS)[number];
+
+export type DailyPricePoint = Readonly<{
+  tradingDate: string;
+  closePrice: number;
+  volume: number;
+}>;
+
+export type DailyPriceSnapshot = Readonly<{
+  period: DailyPricePeriod;
+  points: readonly DailyPricePoint[];
+  latest: DailyPricePoint | null;
+  changeAmount: number | null;
+  changeRate: number | null;
+}>;
+
+export interface DailyPriceQueryRepository {
+  findRecentByStockCode(stockCode: string, limit: number): Promise<readonly DailyPricePoint[]>;
+}

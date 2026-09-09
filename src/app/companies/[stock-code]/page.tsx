@@ -2,15 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthMessage } from "@/components/AuthMessage";
 import { DisclosureList } from "@/components/DisclosureList";
+import { DailyPriceChart } from "@/components/DailyPriceChart";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { WatchlistButton } from "@/components/WatchlistButton";
 import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
+import { createDailyPriceQueryRepository } from "@/data/supabase-daily-price-query-repository";
 import { createWatchlistCompanyReader } from "@/data/supabase-watchlist-company-reader";
 import { SupabaseWatchlistRepository } from "@/data/supabase-watchlist-repository";
 import { getCompany } from "@/server/company-use-cases";
 import { listCompanyDisclosures } from "@/server/disclosure-use-cases";
+import { getDailyPriceSnapshot } from "@/server/daily-price-use-cases";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { getSavedState } from "@/server/watchlist-use-cases";
 
@@ -18,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 type Props = Readonly<{
   params: Promise<{ "stock-code": string }>;
-  searchParams: Promise<{ error?: string; message?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; period?: string }>;
 }>;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -51,8 +54,9 @@ export default async function CompanyPage({ params, searchParams }: Props) {
     );
   }
 
-  const [disclosures, supabase] = await Promise.all([
+  const [disclosures, priceSnapshot, supabase] = await Promise.all([
     listCompanyDisclosures(createDisclosureRepository(), stockCode, 10),
+    getDailyPriceSnapshot(createDailyPriceQueryRepository(), stockCode, status.period ?? null),
     createSupabaseServerClient(),
   ]);
   const { data: { user } } = await supabase.auth.getUser();
@@ -99,6 +103,28 @@ export default async function CompanyPage({ params, searchParams }: Props) {
             <p>시장·업종 분류는 공식 데이터 확인 후 제공됩니다.</p>
           </aside>
         </div>
+
+        <section className="info-card price-section" aria-labelledby="daily-price-heading">
+          <div className="section-heading price-section__heading">
+            <div>
+              <p className="eyebrow">일별 시세</p>
+              <h2 id="daily-price-heading">주가 흐름</h2>
+            </div>
+            <nav className="period-tabs" aria-label="주가 조회 기간">
+              {(["1M", "3M", "1Y"] as const).map((period) => (
+                <Link
+                  className={priceSnapshot.period === period ? "period-tab period-tab--active" : "period-tab"}
+                  href={`/companies/${stockCode}?period=${period}`}
+                  aria-current={priceSnapshot.period === period ? "page" : undefined}
+                  key={period}
+                >
+                  {period}
+                </Link>
+              ))}
+            </nav>
+          </div>
+          <DailyPriceChart companyName={company.name} snapshot={priceSnapshot} />
+        </section>
 
         <section className="section" aria-labelledby="disclosure-heading">
           <div className="section-heading">

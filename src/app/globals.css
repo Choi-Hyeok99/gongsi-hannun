@@ -78,9 +78,10 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .text-link { color: var(--primary); font-size: 14px; font-weight: 800; }
 .featured-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .featured-card, .company-result { display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 5px 18px rgba(31, 49, 77, 0.04); transition: transform 150ms ease, border-color 150ms ease; }
-.featured-card { padding: 19px; border-radius: 16px; }
+.featured-card { display: grid; gap: 14px; min-width: 0; padding: 19px; border-radius: 16px; }
 .featured-card:hover, .company-result:hover { transform: translateY(-2px); border-color: #9fc1ef; }
-.featured-card span:nth-child(2) { display: grid; min-width: 0; }
+.featured-card__heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.featured-card__identity { display: grid; min-width: 0; }
 .featured-card strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .featured-card small, .company-result span, .company-result small { color: var(--muted); }
 .company-avatar { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 13px; color: var(--primary); background: var(--surface-soft); font-weight: 900; }
@@ -127,6 +128,37 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .company-facts div:last-child { border-bottom: 0; }
 .company-facts dt { color: var(--muted); }
 .company-facts dd { margin: 0; font-weight: 750; }
+
+.price-section { margin-top: 18px; }
+.price-section__heading { align-items: center; }
+.period-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 11px; background: var(--background); }
+.period-tab { min-width: 46px; padding: 6px 9px; border-radius: 8px; color: var(--muted); text-align: center; font-size: 13px; font-weight: 800; }
+.period-tab:hover { color: var(--primary); }
+.period-tab--active { color: white; background: var(--primary); }
+.period-tab--active:hover { color: white; }
+.price-chart { min-width: 0; }
+.price-chart__summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; margin-bottom: 12px; }
+.price-chart__summary > strong { font-size: clamp(25px, 4vw, 34px); line-height: 1.2; }
+.price-change { font-size: 14px; font-weight: 800; }
+.price-change--up { color: #d92d20; }
+.price-change--down { color: #1769e0; }
+.price-change--flat { color: var(--muted); }
+.price-chart__svg { display: block; width: 100%; height: 220px; overflow: visible; border-bottom: 1px solid var(--border); }
+.price-chart__line { fill: none; stroke: #667085; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.price-chart__line--up { stroke: #d92d20; }
+.price-chart__line--down { stroke: #1769e0; }
+.price-chart__axis { display: flex; justify-content: space-between; margin-top: 7px; color: var(--muted); font-size: 12px; }
+.price-chart__notice { display: block; margin-top: 9px; color: var(--muted); font-size: 12px; }
+.price-chart--compact .price-chart__summary { display: grid; gap: 1px; margin: 0; }
+.price-chart--compact .price-chart__summary > strong { font-size: 18px; }
+.price-chart--compact .price-change { font-size: 11px; }
+.price-chart--compact .price-chart__svg { height: 64px; border: 0; }
+.price-chart--compact .price-chart__notice { margin-top: 3px; }
+.price-empty { display: grid; min-height: 220px; place-content: center; padding: 22px; border: 1px dashed #c8d2df; border-radius: 14px; text-align: center; background: var(--background); }
+.price-empty strong { color: #475467; font-size: 15px; }
+.price-empty p { max-width: 520px; margin: 7px 0 0; color: var(--muted); font-size: 14px; }
+.price-empty--compact { min-height: 96px; padding: 12px; }
+.price-empty--compact strong { font-size: 13px; }
 
 .disclosure-list { display: grid; gap: 12px; }
 .disclosure-card {
@@ -210,6 +242,10 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   .featured-grid { grid-template-columns: 1fr; }
   .notice-card, .detail-grid { grid-template-columns: 1fr; }
   .notice-card, .info-card { padding: 22px; }
+  .price-section__heading { align-items: flex-start; }
+  .period-tabs { width: 100%; }
+  .period-tab { flex: 1; }
+  .price-chart__svg { height: 170px; }
   .page-content { padding-top: 22px; padding-bottom: 52px; }
   .breadcrumb { margin-bottom: 24px; }
   .company-hero { align-items: flex-start; }
