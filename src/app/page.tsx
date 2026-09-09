@@ -5,7 +5,9 @@ import { DisclosureList } from "@/components/DisclosureList";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
+import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDailyPriceQueryRepository } from "@/data/supabase-daily-price-query-repository";
+import { getCompany } from "@/server/company-use-cases";
 import { getDailyPriceSnapshot } from "@/server/daily-price-use-cases";
 import { listLatestDisclosures } from "@/server/disclosure-use-cases";
 
@@ -22,9 +24,11 @@ const featuredCompanies = [
 
 export default async function HomePage() {
   const dailyPriceRepository = createDailyPriceQueryRepository();
-  const [latestDisclosures, featuredPrices] = await Promise.all([
+  const companyRepository = createCompanyRepository();
+  const [latestDisclosures, featuredPrices, featuredCompanyDetails] = await Promise.all([
     listLatestDisclosures(createDisclosureRepository(), 8),
     Promise.all(featuredCompanies.map((company) => getDailyPriceSnapshot(dailyPriceRepository, company.stockCode, "1M"))),
+    Promise.all(featuredCompanies.map((company) => getCompany(companyRepository, company.stockCode))),
   ]);
 
   return (
@@ -60,6 +64,9 @@ export default async function HomePage() {
                   <span className="featured-card__identity">
                     <strong>{company.name}</strong>
                     <small>{company.stockCode}</small>
+                    <span className={featuredCompanyDetails[index]?.industryCategory === "UNCLASSIFIED" ? "industry-badge industry-badge--muted" : "industry-badge"}>
+                      {featuredCompanyDetails[index]?.industryCategoryLabel ?? "미분류"}
+                    </span>
                   </span>
                   <span className="card-arrow" aria-hidden="true">→</span>
                 </span>

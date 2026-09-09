@@ -78,6 +78,9 @@ export default async function CompanyPage({ params, searchParams }: Props) {
             <p className="eyebrow">기업 정보</p>
             <h1>{company.name}</h1>
             <p>{company.stockCode} · {market}</p>
+            <span className={company.industryCategory === "UNCLASSIFIED" ? "industry-badge industry-badge--muted" : "industry-badge"}>
+              {company.industryCategoryLabel ?? "미분류"}
+            </span>
           </div>
           <div className="company-hero__action">
             <WatchlistButton stockCode={stockCode} isAuthenticated={Boolean(user)} isSaved={isSaved} />
@@ -93,14 +96,15 @@ export default async function CompanyPage({ params, searchParams }: Props) {
               <div><dt>기업명</dt><dd>{company.name}</dd></div>
               <div><dt>종목코드</dt><dd>{company.stockCode}</dd></div>
               <div><dt>시장</dt><dd>{market}</dd></div>
-              <div><dt>업종</dt><dd>{company.sector ?? "업종 정보 준비 중"}</dd></div>
+              <div><dt>업종 분류</dt><dd>{company.industryCategoryLabel ?? "미분류"}</dd></div>
+              <div><dt>세부 업종</dt><dd>{company.sector ?? "미분류"}</dd></div>
             </dl>
           </section>
 
           <aside className="info-card info-card--accent">
             <p className="eyebrow">데이터 상태</p>
             <h2>OpenDART 기업정보 연결 완료</h2>
-            <p>시장·업종 분류는 공식 데이터 확인 후 제공됩니다.</p>
+            <p>업종은 공식 데이터의 세부 업종을 15개 표준 카테고리로 정리해 제공합니다.</p>
           </aside>
         </div>
 
