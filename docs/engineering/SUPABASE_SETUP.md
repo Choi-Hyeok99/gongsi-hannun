@@ -3,7 +3,7 @@
 ## Current status
 
 - [ ] Create the development project in the Seoul region.
-- [ ] Copy the project URL, publishable key, and service-role key to `.env.local`.
+- [ ] Copy the project URLs, publishable key, and secret key to `.env.local`.
 - [ ] Apply `supabase/migrations/202609090001_initial_secure_schema.sql`.
 - [ ] Run the post-migration verification queries below.
 
@@ -13,11 +13,12 @@ Never commit `.env.local`, access tokens, database passwords, or service-role ke
 
 Create `.env.local` from `.env.example` and fill these values from the Supabase project settings:
 
-- `NEXT_PUBLIC_SUPABASE_URL`: safe for browser and server use.
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: safe for browser use with Row Level Security enabled.
-- `SUPABASE_SERVICE_ROLE_KEY`: server-only secret; never use in client components.
+- `NEXT_PUBLIC_SUPABASE_URL`: project URL used by browser clients.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: safe for browser use with Row Level Security enabled.
+- `SUPABASE_URL`: project URL used by server-only modules.
+- `SUPABASE_SECRET_KEY`: server-only secret; never use in client components.
 
-Keep `SUPABASE_ACCESS_TOKEN`, the database password, and the project reference outside tracked files. They are deployment or CLI credentials, not application runtime variables.
+Keep `SUPABASE_ACCESS_TOKEN`, the database password, and the project reference outside tracked files. They are deployment or CLI credentials, not application runtime variables. Use the current `sb_publishable_...` and `sb_secret_...` keys rather than the legacy `anon` and `service_role` keys.
 
 ## Apply the migration
 
@@ -50,3 +51,4 @@ All application tables must report `rowsecurity = true`. Confirm that profile an
 | Date (KST) | Result | Note |
 | --- | --- | --- |
 | 2026-09-09 | Prepared | Environment variable contract and migration verification steps recorded. Project creation and migration application require Supabase account access. |
+| 2026-09-09 | Updated | Environment variable contract migrated to Supabase publishable and secret API keys. |
