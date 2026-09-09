@@ -7,9 +7,14 @@ export function CompanyResultCard({ company }: Readonly<{ company: PublicCompany
     <Link className="company-result" href={`/companies/${company.stockCode}`}>
       <span className="company-avatar company-avatar--large" aria-hidden="true">{company.name.slice(0, 1)}</span>
       <span className="company-result__body">
-        <strong>{company.name}</strong>
+        <span className="company-result__title">
+          <strong>{company.name}</strong>
+          <span className={company.industryCategory === "UNCLASSIFIED" ? "industry-badge industry-badge--muted" : "industry-badge"}>
+            {company.industryCategoryLabel ?? "미분류"}
+          </span>
+        </span>
         <span>{company.stockCode} · {market}</span>
-        <small>{company.sector ?? "업종 정보 준비 중"}</small>
+        <small>{company.sector ?? "세부 업종 미분류"}</small>
       </span>
       <span className="card-arrow" aria-hidden="true">→</span>
     </Link>
