@@ -10,7 +10,7 @@ export function SiteHeader() {
         </Link>
         <nav aria-label="주요 메뉴">
           <Link href="/search?query=삼성">기업</Link>
-          <span className="nav-disabled" aria-disabled="true">오늘의 주요 공시</span>
+          <Link href="/disclosures">오늘의 주요 공시</Link>
         </nav>
       </div>
     </header>
