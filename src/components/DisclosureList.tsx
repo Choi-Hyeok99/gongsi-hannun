@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { DisclosureSummary } from "@/domain/disclosure-query";
+import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
 
 type Props = Readonly<{
   disclosures: readonly DisclosureSummary[];
@@ -29,6 +30,7 @@ export function DisclosureList({ disclosures, emptyMessage = "표시할 공시�
             <div className="disclosure-card__meta">
               <strong>{disclosure.company.name}</strong>
               <span>{disclosure.company.market}</span>
+              <span className="event-type-badge">{getDisclosureEventTypeLabel(disclosure.eventType)}</span>
               {disclosure.status === "REVIEW_REQUIRED" ? <span className="status-badge">정정 확인</span> : null}
             </div>
             <h3>{disclosure.reportName}</h3>

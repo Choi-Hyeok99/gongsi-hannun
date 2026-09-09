@@ -31,6 +31,11 @@ describe("classifyDisclosureReport", () => {
       .toMatchObject({ eventType: "CLINICAL_RESULT", matchedRuleId: "clinical-result" });
   });
 
+  it("treats a control-transfer agreement as a shareholder change", () => {
+    expect(classifyDisclosureReport("경영권 변경 등에 관한 계약 체결"))
+      .toMatchObject({ eventType: "SHAREHOLDER_CHANGE", matchedRuleId: "shareholder-change" });
+  });
+
   it("adds an auditable reason and score adjustment for corrections", () => {
     const result = classifyDisclosureReport("[기재정정] 단일판매·공급계약체결");
 

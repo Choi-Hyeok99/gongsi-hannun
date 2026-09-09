@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "sync:companies": "tsx --env-file=.env.local src/jobs/collector/run-company-sync.ts",
     "sync:disclosures": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-sync.ts",
+    "materialize:events": "tsx --env-file=.env.local src/jobs/collector/run-event-materialization.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
