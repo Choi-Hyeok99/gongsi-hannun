@@ -7,6 +7,7 @@
     "build": "next build",
     "lint": "eslint .",
     "sync:companies": "tsx --env-file=.env.local src/jobs/collector/run-company-sync.ts",
+    "sync:disclosures": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-sync.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
