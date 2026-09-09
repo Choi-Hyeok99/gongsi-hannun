@@ -17,3 +17,12 @@ export async function searchCompanies(repository: CompanyRepository, rawQuery: s
   const companies = await repository.search(query, 20);
   return companies.map(toPublicCompany);
 }
+
+export async function getCompany(
+  repository: CompanyRepository,
+  stockCode: string,
+): Promise<PublicCompany | null> {
+  if (!/^[0-9]{6}$/.test(stockCode)) return null;
+  const company = await repository.findByStockCode(stockCode);
+  return company ? toPublicCompany(company) : null;
+}
