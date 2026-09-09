@@ -2,10 +2,10 @@
 
 ## Current status
 
-- [ ] Create the development project in the Seoul region.
-- [ ] Copy the project URLs, publishable key, and secret key to `.env.local`.
-- [ ] Apply `supabase/migrations/202609090001_initial_secure_schema.sql`.
-- [ ] Run the post-migration verification queries below.
+- [x] Create the development project in the Seoul region.
+- [x] Copy the project URLs, publishable key, and secret key to `.env.local`.
+- [x] Apply `supabase/migrations/202609090001_initial_secure_schema.sql`.
+- [x] Run the post-migration verification queries below.
 
 Never commit `.env.local`, access tokens, database passwords, or service-role keys.
 
@@ -52,3 +52,4 @@ All application tables must report `rowsecurity = true`. Confirm that profile an
 | --- | --- | --- |
 | 2026-09-09 | Prepared | Environment variable contract and migration verification steps recorded. Project creation and migration application require Supabase account access. |
 | 2026-09-09 | Updated | Environment variable contract migrated to Supabase publishable and secret API keys. |
+| 2026-09-09 | Completed | Development project connected. Migration succeeded with 7 public tables, RLS enabled on all 7 tables, and 5 policies. |
