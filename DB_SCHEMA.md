@@ -17,6 +17,7 @@
 ```text
 companies 1 ─── N source_disclosures
 companies 1 ─── N events
+source_disclosures 1 ─── N disclosure_documents
 source_disclosures 1 ─── 0..1 events
 events 1 ─── N ai_analyses
 ingestion_runs 1 ─── N source_disclosures (선택적 추적)
@@ -92,6 +93,8 @@ OpenDART에서 얻은 공시의 원본 식별자와 사실 메타데이터를 �
 | `original_url` | `text` | NOT NULL, 공식 원문 URL |
 | `raw_metadata` | `jsonb` | 허용 범위의 원본 응답 메타데이터 |
 | `content_fetched_at` | `timestamptz` | 분석용 본문 확보 시각, NULL 허용 |
+| `content_fetch_status` | `text` | `PENDING`, `FETCHING`, `READY`, `UNAVAILABLE`, `FAILED` |
+| `content_fetch_error` | `text` | 비밀정보를 제외한 안전한 실패 요약, NULL 허용 |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
 
@@ -101,9 +104,30 @@ OpenDART에서 얻은 공시의 원본 식별자와 사실 메타데이터를 �
 - `INDEX (company_id, disclosed_on DESC)`
 - `INDEX (disclosed_on DESC)`
 
-공시 본문 전문의 저장 여부와 보존 기간은 이용조건 및 실제 분석 방식 승인 후 결정한다. 승인 전에는 메타데이터 중심 설계를 기본으로 한다.
+공시 원문은 공식 OpenDART 원본파일 API에서 서버 작업으로만 수집하며, 실행 가능한 HTML 대신 정리된 일반 텍스트만 저장한다.
 
-### 3.4 `events`
+### 3.4 `disclosure_documents`
+
+접수번호 하나에 포함된 대표 본문과 첨부문서를 분리해 저장한다.
+
+| 컬럼 | 타입 | 제약/설명 |
+|---|---|---|
+| `id` | `uuid` | PK |
+| `source_disclosure_id` | `uuid` | NOT NULL, FK -> `source_disclosures.id`, 삭제 시 함께 삭제 |
+| `sequence_no` | `smallint` | 1~100, 공식 ZIP 내 순서 |
+| `document_kind` | `text` | `MAIN`, `ATTACHMENT` |
+| `title` | `text` | 문서 내부 제목, 최대 500자 |
+| `file_name` | `text` | 경로 문자를 제거한 안전한 파일명 |
+| `mime_type` | `text` | 허용된 XML, HTML, 일반 텍스트만 저장 |
+| `byte_size` | `integer` | 원본 문서 크기 |
+| `content_hash` | `varchar(64)` | 중복 분석 방지용 SHA-256 |
+| `content_text` | `text` | 스크립트와 태그를 제거한 일반 텍스트 |
+| `is_truncated` | `boolean` | 안전한 저장 한도 때문에 일부만 저장했는지 여부 |
+| `fetched_at` | `timestamptz` | 수집 시각 |
+
+사용자 브라우저는 이 테이블을 직접 조회하지 않는다. RLS를 강제하고 `service_role`에만 권한을 부여한다.
+
+### 3.5 `events`
 
 공시를 사용자가 탐색할 수 있는 기업 이벤트로 정규화한 사실 레코드다.
 
@@ -152,7 +176,7 @@ OpenDART에서 얻은 공시의 원본 식별자와 사실 메타데이터를 �
 
 정확한 한국어 명칭, 공시명 매핑과 MVP 우선 지원 유형은 사용자 승인 후 고정한다.
 
-### 3.5 `ai_analyses`
+### 3.6 `ai_analyses`
 
 이벤트 사실과 분리된 AI 생성 설명 및 처리 상태다.
 
@@ -184,7 +208,7 @@ OpenDART에서 얻은 공시의 원본 식별자와 사실 메타데이터를 �
 - `INDEX (status, created_at)` — 미처리/실패 작업 조회
 - 공개 조회는 기본적으로 `status = 'SUCCEEDED'`만 사용한다.
 
-### 3.6 `profiles`
+### 3.7 `profiles`
 
 Supabase Auth 사용자의 서비스 표시정보만 저장한다. 이메일, 비밀번호 해시, OAuth 토큰은 저장하지 않는다.
 
@@ -197,7 +221,7 @@ Supabase Auth 사용자의 서비스 표시정보만 저장한다. 이메일, �
 
 생년월일과 성별은 핵심 기능의 수집 목적이 승인되지 않았으므로 저장하지 않는다. RLS로 본인만 조회·닉네임 변경이 가능하다.
 
-### 3.7 `watchlist_companies`
+### 3.8 `watchlist_companies`
 
 | 컬럼 | 타입 | 제약/설명 |
 |---|---|---|
