@@ -9,6 +9,7 @@ import type {
 import { DataAccessError } from "@/domain/errors";
 
 const BATCH_SIZE = 500;
+const EXISTING_PAGE_SIZE = 1_000;
 
 type RepositoryOptions = Readonly<{
   supabaseUrl: string;
@@ -153,20 +154,31 @@ export class SupabaseDailyPriceRepository implements DailyPriceSyncRepository, D
     companyByStockCode: ReadonlyMap<string, string>,
   ): Promise<ReadonlySet<string>> {
     const keys = new Set<string>();
-    for (const batch of batches(prices, BATCH_SIZE)) {
-      const companyIds = batch.flatMap((price) => {
-        const id = companyByStockCode.get(price.stockCode);
-        return id ? [id] : [];
-      });
-      const dates = [...new Set(batch.map((price) => price.tradingDate))];
+    const companyIds = new Set(prices.flatMap((price) => {
+      const id = companyByStockCode.get(price.stockCode);
+      return id ? [id] : [];
+    }));
+    const dates = prices.map((price) => price.tradingDate).sort();
+    const firstDate = dates[0];
+    const lastDate = dates.at(-1);
+    if (!firstDate || !lastDate || companyIds.size === 0) return keys;
+
+    for (let from = 0; ; from += EXISTING_PAGE_SIZE) {
       const { data, error } = await this.client
         .from("daily_prices")
         .select("company_id,trading_date")
         .eq("source", sourceId)
-        .in("company_id", companyIds)
-        .in("trading_date", dates);
+        .gte("trading_date", firstDate)
+        .lte("trading_date", lastDate)
+        .order("company_id")
+        .order("trading_date")
+        .range(from, from + EXISTING_PAGE_SIZE - 1);
       if (error) throw new DataAccessError("기존 일별 주가를 확인하지 못했습니다.");
-      for (const row of data ?? []) keys.add(`${row.company_id}:${row.trading_date}`);
+      const rows = data ?? [];
+      for (const row of rows) {
+        if (companyIds.has(String(row.company_id))) keys.add(`${row.company_id}:${row.trading_date}`);
+      }
+      if (rows.length < EXISTING_PAGE_SIZE) break;
     }
     return keys;
   }
