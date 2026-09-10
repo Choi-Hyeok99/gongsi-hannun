@@ -54,6 +54,17 @@ describe("KrxDailyPriceClient", () => {
     expect(fetcher).toHaveBeenCalledTimes(6);
   });
 
+  it("ignores official alphanumeric issue codes outside the requested common stocks", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify({
+      OutBlock_1: String(input).includes("stk_bydd_trd")
+        ? [{ ...row, ISU_CD: "00104K" }, row]
+        : [],
+    }), { status: 200 }));
+
+    await expect(new KrxDailyPriceClient({ apiKey: "private-key", fetcher }).fetchDailyPrices(range))
+      .resolves.toHaveLength(1);
+  });
+
   it("preserves the official no-trade representation", async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify({
       OutBlock_1: String(input).includes("knx_bydd_trd") ? [{
