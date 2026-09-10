@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DisclosureRepository, DisclosureSummary } from "@/domain/disclosure-query";
-import { getDisclosure, listCompanyDisclosures, listLatestDisclosures, searchDisclosures } from "@/server/disclosure-use-cases";
+import { findCorrectionTimeline, getDisclosure, listCompanyDisclosures, listDisclosureCalendar, listLatestDisclosures, searchDisclosures } from "@/server/disclosure-use-cases";
 
 const sample: DisclosureSummary = {
   receiptNumber: "20260909000001",
@@ -24,6 +24,7 @@ class FixtureDisclosureRepository implements DisclosureRepository {
   async findByCompanyStockCode(stockCode: string): Promise<readonly DisclosureSummary[]> {
     return stockCode === sample.company.stockCode ? [sample] : [];
   }
+  async findByDateRange(): Promise<readonly DisclosureSummary[]> { return [sample]; }
 }
 
 describe("disclosure use cases", () => {
@@ -81,5 +82,14 @@ describe("disclosure use cases", () => {
     const find = vi.spyOn(repository, "findByCompanyStockCode");
     await expect(listCompanyDisclosures(repository, "5930")).resolves.toEqual([]);
     expect(find).not.toHaveBeenCalled();
+  });
+
+  it("lists a valid disclosure calendar month", async () => {
+    await expect(listDisclosureCalendar(repository, "2026-09")).resolves.toMatchObject({ month: "2026-09", items: [sample] });
+  });
+
+  it("groups an original disclosure with its correction", () => {
+    const correction = { ...sample, receiptNumber: "20260910000001", reportName: "[기재정정]단일판매ㆍ공급계약체결", disclosedOn: "2026-09-10" };
+    expect(findCorrectionTimeline(correction, [correction, sample])).toHaveLength(2);
   });
 });

@@ -106,6 +106,22 @@ export class SupabaseDisclosureRepository implements DisclosureRepository {
     return (data as unknown as DisclosureRow[]).map(mapDisclosure);
   }
 
+  async findByDateRange(from: string, to: string, limit: number): Promise<readonly DisclosureSummary[]> {
+    const { data, error } = await this.client
+      .from("source_disclosures")
+      .select(SELECTION)
+      .eq("events.visibility", "PUBLIC")
+      .neq("events.event_type", "OTHER")
+      .gte("events.rule_importance_score", 70)
+      .gte("disclosed_on", from)
+      .lte("disclosed_on", to)
+      .order("disclosed_on", { ascending: true })
+      .order("receipt_no", { ascending: true })
+      .limit(limit);
+    if (error) throw new DataAccessError("공시 일정을 조회하지 못했습니다.");
+    return (data as unknown as DisclosureRow[]).map(mapDisclosure);
+  }
+
   private async findMatchingCompanyIds(term: string): Promise<readonly string[]> {
     const escaped = term.replaceAll("%", "\\%").replaceAll("_", "\\_");
     const { data, error } = await this.client

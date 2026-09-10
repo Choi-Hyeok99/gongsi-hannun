@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DisclosureList } from "@/components/DisclosureList";
+import { ListPositionMemory } from "@/components/ListPositionMemory";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
@@ -44,11 +45,13 @@ export default async function DisclosuresPage({ searchParams }: Props) {
     <div className="site-shell">
       <SiteHeader />
       <main className="content-container page-content">
+        <ListPositionMemory />
         <div className="breadcrumb"><Link href="/">홈</Link><span>/</span><span>오늘의 주요 공시</span></div>
         <section className="page-intro">
           <p className="eyebrow">OpenDART 최신 정보</p>
           <h1>오늘의 주요 공시</h1>
           <p>실제 공시일 기준으로 날짜를 선택하거나 과거 공시까지 이동할 수 있습니다.</p>
+          <Link className="text-link" href="/calendar">달력으로 보기 →</Link>
         </section>
         <form className="disclosure-filter" action="/disclosures" method="get">
           <label htmlFor="disclosure-query">검색</label>

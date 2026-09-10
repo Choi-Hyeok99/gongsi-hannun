@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CompanyCategoryFilter } from "@/components/CompanyCategoryFilter";
 import { CompanyResultCard } from "@/components/CompanyResultCard";
 import { CompanySearchForm } from "@/components/CompanySearchForm";
+import { ListPositionMemory } from "@/components/ListPositionMemory";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createCompanyRepository } from "@/data/supabase-company-repository";
@@ -63,6 +64,7 @@ export default async function SearchPage({ searchParams }: Props) {
     <div className="site-shell">
       <SiteHeader />
       <main className="content-container page-content">
+        <ListPositionMemory />
         <div className="breadcrumb"><Link href="/">홈</Link><span>/</span><span>기업 검색</span></div>
         <section className="page-intro">
           <p className="eyebrow">기업 찾기</p>

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EasyDisclosureTitle } from "@/components/EasyDisclosureTitle";
+import { ReturnToListButton } from "@/components/ReturnToListButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
 import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
-import { getDisclosure } from "@/server/disclosure-use-cases";
+import { findCorrectionTimeline, getDisclosure, listCompanyDisclosures } from "@/server/disclosure-use-cases";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,8 @@ type Props = Readonly<{
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { "receipt-number": receiptNumber } = await params;
-  const disclosure = await getDisclosure(createDisclosureRepository(), receiptNumber);
+  const repository = createDisclosureRepository();
+  const disclosure = await getDisclosure(repository, receiptNumber);
   return {
     title: disclosure ? `${disclosure.reportName} | 공시한눈` : "공시 상세 | 공시한눈",
     description: disclosure ? `${disclosure.company.name}의 ${disclosure.reportName} 공시입니다.` : "공시 상세 정보를 확인합니다.",
@@ -23,7 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DisclosureDetailPage({ params }: Props) {
   const { "receipt-number": receiptNumber } = await params;
-  const disclosure = await getDisclosure(createDisclosureRepository(), receiptNumber);
+  const repository = createDisclosureRepository();
+  const disclosure = await getDisclosure(repository, receiptNumber);
 
   if (!disclosure) {
     return (
@@ -41,6 +45,9 @@ export default async function DisclosureDetailPage({ params }: Props) {
     );
   }
 
+  const companyDisclosures = await listCompanyDisclosures(repository, disclosure.company.stockCode, 30);
+  const correctionTimeline = findCorrectionTimeline(disclosure, companyDisclosures);
+
   return (
     <div className="site-shell">
       <SiteHeader />
@@ -51,7 +58,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
         <article className="disclosure-detail">
           <div className="disclosure-detail__heading">
             <p className="eyebrow">공시 상세</p>
-            <h1>{disclosure.reportName}</h1>
+            <EasyDisclosureTitle text={disclosure.reportName} />
             <Link href={`/companies/${disclosure.company.stockCode}`}>{disclosure.company.name} · {disclosure.company.market}</Link>
           </div>
           <dl className="company-facts">
@@ -59,14 +66,29 @@ export default async function DisclosureDetailPage({ params }: Props) {
             <div><dt>공시일</dt><dd>{disclosure.disclosedOn}</dd></div>
             <div><dt>제출인</dt><dd>{disclosure.filerName ?? disclosure.company.name}</dd></div>
             <div><dt>접수번호</dt><dd>{disclosure.receiptNumber}</dd></div>
-            <div><dt>상태</dt><dd>{disclosure.status === "REVIEW_REQUIRED" ? "정정 여부 확인 필요" : "정상"}</dd></div>
+            <div><dt>상태</dt><dd>{getStatusLabel(disclosure.status)}</dd></div>
           </dl>
-          <a className="primary-link disclosure-detail__source" href={disclosure.originalUrl} target="_blank" rel="noopener noreferrer">
-            OpenDART 원문 보기
-          </a>
+          {correctionTimeline.length > 1 && (
+            <section className="correction-timeline" aria-labelledby="correction-heading">
+              <div><p className="eyebrow">최신본 확인</p><h2 id="correction-heading">정정공시 흐름</h2></div>
+              <p>같은 제목의 공시를 날짜순으로 연결했습니다. 가장 최근 공시와 원문을 확인해 주세요.</p>
+              <ol>{correctionTimeline.map((item, index) => <li key={item.receiptNumber}><Link aria-current={item.receiptNumber === disclosure.receiptNumber ? "page" : undefined} href={`/disclosures/${item.receiptNumber}`}><span>{index === 0 ? "최초" : `${index + 1}차`}</span><strong>{item.disclosedOn}</strong><small>{item.receiptNumber === disclosure.receiptNumber ? "현재 보고 있는 공시" : item.reportName}</small></Link></li>)}</ol>
+            </section>
+          )}
+          <div className="disclosure-detail__actions">
+            <a className="primary-link" href={disclosure.originalUrl} target="_blank" rel="noopener noreferrer">OpenDART 원문 보기</a>
+            <ReturnToListButton />
+          </div>
         </article>
       </main>
       <SiteFooter />
     </div>
   );
+}
+
+function getStatusLabel(status: "ACTIVE" | "CORRECTED" | "CANCELLED" | "REVIEW_REQUIRED"): string {
+  if (status === "CORRECTED") return "정정된 이전 공시";
+  if (status === "CANCELLED") return "취소된 공시";
+  if (status === "REVIEW_REQUIRED") return "정정 여부 확인 필요";
+  return "정상";
 }
