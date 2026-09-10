@@ -34,7 +34,6 @@ export async function loginWithKakao(formData: FormData) {
     provider: "kakao",
     options: {
       redirectTo: buildAuthCallbackUrl(readSiteUrl(), next),
-      scopes: "profile_nickname",
     },
   });
 
