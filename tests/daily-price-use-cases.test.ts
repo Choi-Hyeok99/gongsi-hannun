@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DailyPricePoint, DailyPriceQueryRepository } from "@/domain/daily-price";
-import { getDailyPriceSnapshot } from "@/server/daily-price-use-cases";
+import { DataAccessError } from "@/domain/errors";
+import { getDailyPriceSnapshot, getDailyPriceSnapshotOrEmpty } from "@/server/daily-price-use-cases";
 
 class FixtureRepository implements DailyPriceQueryRepository {
   constructor(private readonly points: readonly DailyPricePoint[]) {}
@@ -36,5 +37,25 @@ describe("getDailyPriceSnapshot", () => {
   it("falls back to the three month period", async () => {
     const result = await getDailyPriceSnapshot(new FixtureRepository([]), "005930", "invalid");
     expect(result.period).toBe("3M");
+  });
+
+  it("degrades a price data access failure to an empty snapshot", async () => {
+    const repository: DailyPriceQueryRepository = {
+      async findRecentByStockCode() { throw new DataAccessError("permission denied"); },
+    };
+    await expect(getDailyPriceSnapshotOrEmpty(repository, "005930", "1M")).resolves.toEqual({
+      period: "1M",
+      points: [],
+      latest: null,
+      changeAmount: null,
+      changeRate: null,
+    });
+  });
+
+  it("does not hide unexpected price failures", async () => {
+    const repository: DailyPriceQueryRepository = {
+      async findRecentByStockCode() { throw new Error("unexpected"); },
+    };
+    await expect(getDailyPriceSnapshotOrEmpty(repository, "005930", "1M")).rejects.toThrow("unexpected");
   });
 });
