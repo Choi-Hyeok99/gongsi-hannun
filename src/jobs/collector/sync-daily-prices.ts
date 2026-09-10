@@ -15,7 +15,9 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const STOCK_CODE_PATTERN = /^\d{6}$/;
 const SOURCE_ID_PATTERN = /^[A-Z0-9_]{2,30}$/;
 const POSITIVE_DECIMAL_PATTERN = /^(?:[1-9]\d{0,15})(?:\.\d{1,4})?$/;
+const NON_NEGATIVE_DECIMAL_PATTERN = /^\d{1,16}(?:\.\d{1,4})?$/;
 const NON_NEGATIVE_INTEGER_PATTERN = /^\d{1,24}$/;
+const MAX_RANGE_DAYS = 31;
 
 export async function syncDailyPrices(
   dependencies: Dependencies,
@@ -49,6 +51,13 @@ function validateRange(range: DailyPriceRange): DailyPriceRange {
     throw new Error("유효한 일별 주가 조회 기간이 필요합니다.");
   }
 
+  const from = parseUtcDate(range.from);
+  const to = parseUtcDate(range.to);
+  const rangeDays = Math.floor((to.getTime() - from.getTime()) / 86_400_000) + 1;
+  if (rangeDays > MAX_RANGE_DAYS) {
+    throw new Error("일별 주가 조회 기간은 최대 31일까지 가능합니다.");
+  }
+
   const stockCodes = [...new Set(range.stockCodes)];
   if (stockCodes.length === 0 || stockCodes.some((code) => !STOCK_CODE_PATTERN.test(code))) {
     throw new Error("유효한 6자리 종목코드가 필요합니다.");
@@ -77,9 +86,9 @@ function deduplicateAndValidate(
       || !DATE_PATTERN.test(record.tradingDate)
       || record.tradingDate < range.from
       || record.tradingDate > range.to
-      || !POSITIVE_DECIMAL_PATTERN.test(record.openPrice)
-      || !POSITIVE_DECIMAL_PATTERN.test(record.highPrice)
-      || !POSITIVE_DECIMAL_PATTERN.test(record.lowPrice)
+      || !NON_NEGATIVE_DECIMAL_PATTERN.test(record.openPrice)
+      || !NON_NEGATIVE_DECIMAL_PATTERN.test(record.highPrice)
+      || !NON_NEGATIVE_DECIMAL_PATTERN.test(record.lowPrice)
       || !POSITIVE_DECIMAL_PATTERN.test(record.closePrice)
       || !NON_NEGATIVE_INTEGER_PATTERN.test(record.volume)
     ) {
@@ -90,7 +99,16 @@ function deduplicateAndValidate(
     const high = toScaledInteger(record.highPrice);
     const low = toScaledInteger(record.lowPrice);
     const close = toScaledInteger(record.closePrice);
-    if (high < open || high < low || high < close || low > open || low > high || low > close) {
+    const isNoTrade = record.volume === "0" && open === 0n && high === 0n && low === 0n;
+    const hasValidTradedRange = open > 0n
+      && high >= open
+      && high >= low
+      && high >= close
+      && low > 0n
+      && low <= open
+      && low <= high
+      && low <= close;
+    if (!isNoTrade && !hasValidTradedRange) {
       throw new Error("주가 공급자가 유효하지 않은 가격 범위를 반환했습니다.");
     }
 
@@ -98,6 +116,14 @@ function deduplicateAndValidate(
   }
 
   return [...unique.values()];
+}
+
+function parseUtcDate(value: string): Date {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw new Error("유효한 일별 주가 조회 기간이 필요합니다.");
+  }
+  return date;
 }
 
 function toScaledInteger(value: string): bigint {

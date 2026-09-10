@@ -37,6 +37,10 @@ export interface DailyPriceSyncRepository {
   failRun(runId: string, readCount: number, error: unknown): Promise<void>;
 }
 
+export interface DailyPriceTargetRepository {
+  listActiveStockCodes(): Promise<readonly string[]>;
+}
+
 export const DAILY_PRICE_PERIODS = ["1M", "3M", "1Y"] as const;
 export type DailyPricePeriod = (typeof DAILY_PRICE_PERIODS)[number];
 

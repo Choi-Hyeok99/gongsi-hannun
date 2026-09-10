@@ -4,6 +4,7 @@ import type {
   DailyPriceRecord,
   DailyPriceSyncCounts,
   DailyPriceSyncRepository,
+  DailyPriceTargetRepository,
 } from "@/domain/daily-price";
 import { DataAccessError } from "@/domain/errors";
 
@@ -16,8 +17,32 @@ type RepositoryOptions = Readonly<{
 
 type CompanyRow = Readonly<{ id: string; stock_code: string }>;
 
-export class SupabaseDailyPriceRepository implements DailyPriceSyncRepository {
+export class SupabaseDailyPriceRepository implements DailyPriceSyncRepository, DailyPriceTargetRepository {
   constructor(private readonly client: SupabaseClient) {}
+
+  async listActiveStockCodes(): Promise<readonly string[]> {
+    const stockCodes: string[] = [];
+    const pageSize = 1_000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await this.client
+        .from("companies")
+        .select("stock_code")
+        .eq("is_active", true)
+        .eq("is_listed", true)
+        .not("stock_code", "is", null)
+        .order("stock_code")
+        .range(from, from + pageSize - 1);
+      if (error) throw new DataAccessError("주가 수집 대상 기업을 불러오지 못했습니다.");
+      const rows = data ?? [];
+      for (const row of rows) {
+        if (typeof row.stock_code === "string" && /^\d{6}$/.test(row.stock_code)) {
+          stockCodes.push(row.stock_code);
+        }
+      }
+      if (rows.length < pageSize) break;
+    }
+    return [...new Set(stockCodes)];
+  }
 
   async startRun(range: Pick<DailyPriceRange, "from" | "to">, sourceId: string): Promise<string> {
     const { data, error } = await this.client
@@ -147,7 +172,9 @@ export class SupabaseDailyPriceRepository implements DailyPriceSyncRepository {
   }
 }
 
-export function createSupabaseDailyPriceRepository(options: RepositoryOptions): DailyPriceSyncRepository {
+export function createSupabaseDailyPriceRepository(
+  options: RepositoryOptions,
+): DailyPriceSyncRepository & DailyPriceTargetRepository {
   const client = createClient(options.supabaseUrl, options.supabaseSecretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

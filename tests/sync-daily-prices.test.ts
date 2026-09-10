@@ -89,4 +89,51 @@ describe("syncDailyPrices", () => {
       to: "2026-09-09",
     })).rejects.toThrow("유효하지 않은 일별 가격");
   });
+
+  it("accepts a KRX no-trade day with a positive close", async () => {
+    const noTradePrice = {
+      ...validPrice,
+      openPrice: "0",
+      highPrice: "0",
+      lowPrice: "0",
+      volume: "0",
+    };
+    const source: DailyPriceSource = {
+      sourceId: "KRX_DAILY",
+      fetchDailyPrices: vi.fn(async () => [noTradePrice]),
+    };
+    const repository = createRepository();
+    await expect(syncDailyPrices({ source, repository }, {
+      stockCodes: ["005930"],
+      from: "2026-09-09",
+      to: "2026-09-09",
+    })).resolves.toMatchObject({ readCount: 1, createdCount: 1 });
+  });
+
+  it("rejects backfills longer than 31 calendar days", async () => {
+    const source: DailyPriceSource = {
+      sourceId: "KRX_DAILY",
+      fetchDailyPrices: vi.fn(async () => []),
+    };
+    const repository = createRepository();
+    await expect(syncDailyPrices({ source, repository }, {
+      stockCodes: ["005930"],
+      from: "2026-08-01",
+      to: "2026-09-01",
+    })).rejects.toThrow("최대 31일");
+    expect(repository.startRun).not.toHaveBeenCalled();
+  });
+
+  it("rejects impossible calendar dates", async () => {
+    const source: DailyPriceSource = {
+      sourceId: "KRX_DAILY",
+      fetchDailyPrices: vi.fn(async () => []),
+    };
+    const repository = createRepository();
+    await expect(syncDailyPrices({ source, repository }, {
+      stockCodes: ["005930"],
+      from: "2026-02-30",
+      to: "2026-02-30",
+    })).rejects.toThrow("조회 기간");
+  });
 });
