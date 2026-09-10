@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Company, CompanyRepository } from "@/domain/company";
 import { InvalidInputError } from "@/domain/errors";
-import { getCompany, searchCompanies } from "@/server/company-use-cases";
+import { browseCompaniesPage, getCompany, searchCompanies } from "@/server/company-use-cases";
 
 const sample: Company = { id: "company-1", dartCorpCode: "00126380", stockCode: "005930", nameKo: "삼성전자", market: "KOSPI", sector: "반도체", industryCategory: "SEMICONDUCTOR" };
 
@@ -9,6 +9,10 @@ class FixtureCompanyRepository implements CompanyRepository {
   async search(query: string, _limit: number, category?: Company["industryCategory"]): Promise<readonly Company[]> {
     const matchesQuery = sample.nameKo.includes(query) || sample.stockCode === query;
     return matchesQuery && (!category || category === sample.industryCategory) ? [sample] : [];
+  }
+  async searchPage(query: string, limit: number, offset: number, category?: Company["industryCategory"]) {
+    const companies = await this.search(query, limit, category);
+    return { companies: companies.slice(offset, offset + limit), total: companies.length };
   }
   async findByStockCode(stockCode: string): Promise<Company | null> { return stockCode === sample.stockCode ? sample : null; }
 }
@@ -29,6 +33,26 @@ describe("searchCompanies", () => {
   });
   it("rejects invalid numeric codes", async () => { await expect(searchCompanies(repository, "5930")).rejects.toBeInstanceOf(InvalidInputError); });
   it("rejects an empty query", async () => { await expect(searchCompanies(repository, " ")).rejects.toBeInstanceOf(InvalidInputError); });
+});
+
+describe("browseCompaniesPage", () => {
+  const repository = new FixtureCompanyRepository();
+
+  it("allows browsing all companies without a search query", async () => {
+    await expect(browseCompaniesPage(repository, "", "", "1")).resolves.toMatchObject({
+      companies: [{ stockCode: "005930", name: "삼성전자" }],
+      total: 1,
+      page: 1,
+    });
+  });
+
+  it("falls back to the first page for an invalid page value", async () => {
+    await expect(browseCompaniesPage(repository, "", "", "invalid")).resolves.toMatchObject({ page: 1 });
+  });
+
+  it("clamps a page beyond the final result page", async () => {
+    await expect(browseCompaniesPage(repository, "", "", "99")).resolves.toMatchObject({ page: 1, totalPages: 1 });
+  });
 });
 
 describe("getCompany", () => {

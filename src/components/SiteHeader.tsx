@@ -24,7 +24,7 @@ export async function SiteHeader() {
           <span>공시한눈</span>
         </Link>
         <nav aria-label="주요 메뉴">
-          <Link href="/search?query=삼성">기업</Link>
+          <Link href="/search">기업</Link>
           <Link href="/disclosures">오늘의 주요 공시</Link>
           {user ? (
             <div className="auth-nav">

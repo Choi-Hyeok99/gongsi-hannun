@@ -10,6 +10,14 @@ export type PublicCompany = Readonly<{
   industryCategoryLabel?: string;
 }>;
 
+export type PublicCompanyPage = Readonly<{
+  companies: readonly PublicCompany[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}>;
+
 function toPublicCompany(company: Company): PublicCompany {
   return {
     stockCode: company.stockCode,
@@ -31,6 +39,33 @@ export async function searchCompanies(
   const query = !hasQuery && category ? "" : normalizeCompanyQuery(rawQuery);
   const companies = await repository.search(query, 20, category);
   return companies.map(toPublicCompany);
+}
+
+export async function browseCompaniesPage(
+  repository: CompanyRepository,
+  rawQuery: string | null,
+  rawCategory: string | null,
+  rawPage: string | null,
+  pageSize = 24,
+): Promise<PublicCompanyPage> {
+  const category = normalizeCompanyCategory(rawCategory);
+  const trimmedQuery = rawQuery?.normalize("NFKC").trim() ?? "";
+  const query = trimmedQuery ? normalizeCompanyQuery(trimmedQuery) : "";
+  const parsedPage = Number(rawPage);
+  let page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  let result = await repository.searchPage(query, pageSize, (page - 1) * pageSize, category);
+  const totalPages = Math.max(1, Math.ceil(result.total / pageSize));
+  if (page > totalPages) {
+    page = totalPages;
+    result = await repository.searchPage(query, pageSize, (page - 1) * pageSize, category);
+  }
+  return {
+    companies: result.companies.map(toPublicCompany),
+    total: result.total,
+    page,
+    pageSize,
+    totalPages,
+  };
 }
 
 export async function getCompany(

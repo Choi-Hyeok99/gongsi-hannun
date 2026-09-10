@@ -62,4 +62,8 @@ export type DailyPriceSnapshot = Readonly<{
 
 export interface DailyPriceQueryRepository {
   findRecentByStockCode(stockCode: string, limit: number): Promise<readonly DailyPricePoint[]>;
+  findRecentByStockCodes?(
+    stockCodes: readonly string[],
+    limitPerStock: number,
+  ): Promise<Readonly<Record<string, readonly DailyPricePoint[]>>>;
 }

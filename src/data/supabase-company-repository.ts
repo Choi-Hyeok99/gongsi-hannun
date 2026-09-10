@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Company, CompanyIndustryCategory, CompanyRepository, Market } from "@/domain/company";
+import type { Company, CompanyIndustryCategory, CompanyPage, CompanyRepository, Market } from "@/domain/company";
 import { DataAccessError } from "@/domain/errors";
 import { readServerEnvironment } from "@/server/env";
 
@@ -23,6 +23,25 @@ export class SupabaseCompanyRepository implements CompanyRepository {
     const { data, error } = await request;
     if (error) throw new DataAccessError("기업 정보를 조회하지 못했습니다.");
     return (data as CompanyRow[]).map(mapCompany);
+  }
+
+  async searchPage(query: string, limit: number, offset: number, category?: CompanyIndustryCategory): Promise<CompanyPage> {
+    const normalized = query.replaceAll("%", "\\%").replaceAll("_", "\\_");
+    let baseQuery = this.client
+      .from("companies")
+      .select("id,dart_corp_code,stock_code,name_ko,market,sector,industry_category", { count: "exact" })
+      .eq("is_active", true)
+      .order("name_ko")
+      .range(offset, offset + limit - 1);
+    if (category) baseQuery = baseQuery.eq("industry_category", category);
+    const request = !query
+      ? baseQuery
+      : /^[0-9]{6}$/.test(query)
+        ? baseQuery.eq("stock_code", query)
+        : baseQuery.ilike("name_ko", `${normalized}%`);
+    const { data, error, count } = await request;
+    if (error) throw new DataAccessError("기업 정보를 조회하지 못했습니다.");
+    return { companies: (data as CompanyRow[]).map(mapCompany), total: count ?? 0 };
   }
 
   async findByStockCode(stockCode: string): Promise<Company | null> {

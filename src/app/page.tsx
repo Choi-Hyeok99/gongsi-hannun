@@ -8,7 +8,7 @@ import { createDisclosureRepository } from "@/data/supabase-disclosure-repositor
 import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDailyPriceQueryRepository } from "@/data/supabase-daily-price-query-repository";
 import { getCompany } from "@/server/company-use-cases";
-import { getDailyPriceSnapshotOrEmpty } from "@/server/daily-price-use-cases";
+import { getDailyPriceSnapshotsOrEmpty } from "@/server/daily-price-use-cases";
 import { listLatestDisclosures } from "@/server/disclosure-use-cases";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +17,11 @@ const featuredCompanies = [
   { name: "삼성전자", stockCode: "005930" },
   { name: "SK하이닉스", stockCode: "000660" },
   { name: "NAVER", stockCode: "035420" },
-  { name: "카카오", stockCode: "035720" },
   { name: "현대차", stockCode: "005380" },
   { name: "LG화학", stockCode: "051910" },
+  { name: "삼성바이오로직스", stockCode: "207940" },
+  { name: "KB금융", stockCode: "105560" },
+  { name: "한화에어로스페이스", stockCode: "012450" },
 ] as const;
 
 export default async function HomePage() {
@@ -27,7 +29,7 @@ export default async function HomePage() {
   const companyRepository = createCompanyRepository();
   const [latestDisclosures, featuredPrices, featuredCompanyDetails] = await Promise.all([
     listLatestDisclosures(createDisclosureRepository(), 8),
-    Promise.all(featuredCompanies.map((company) => getDailyPriceSnapshotOrEmpty(dailyPriceRepository, company.stockCode, "1M"))),
+    getDailyPriceSnapshotsOrEmpty(dailyPriceRepository, featuredCompanies.map((company) => company.stockCode), "1M"),
     Promise.all(featuredCompanies.map((company) => getCompany(companyRepository, company.stockCode))),
   ]);
 
@@ -52,8 +54,8 @@ export default async function HomePage() {
               <p className="eyebrow">빠른 탐색</p>
               <h2 id="featured-heading">주요 기업</h2>
             </div>
-            <Link className="text-link" href="/search?query=삼성">
-              기업 검색하기
+            <Link className="text-link" href="/search">
+              더 많은 기업 보기
             </Link>
           </div>
           <div className="featured-grid">
@@ -70,7 +72,7 @@ export default async function HomePage() {
                   </span>
                   <span className="card-arrow" aria-hidden="true">→</span>
                 </span>
-                <DailyPriceChart companyName={company.name} snapshot={featuredPrices[index]!} compact />
+                <DailyPriceChart companyName={company.name} snapshot={featuredPrices[company.stockCode]!} compact />
               </Link>
             ))}
           </div>

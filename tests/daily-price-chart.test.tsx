@@ -22,6 +22,12 @@ describe("DailyPriceChart source disclosure", () => {
     expect(markup).toContain("출처: 한국거래소 통계정보");
   });
 
+  it("uses a compact KRX label and an explicit direction symbol in cards", () => {
+    const markup = renderToStaticMarkup(<DailyPriceChart companyName="삼성전자" snapshot={krxSnapshot} compact />);
+    expect(markup).toContain("최근 1개월 일별 종가 · KRX");
+    expect(markup).toContain("▲");
+  });
+
   it("does not claim a source in the empty state", () => {
     const markup = renderToStaticMarkup(<DailyPriceChart companyName="삼성전자" snapshot={{
       ...krxSnapshot,

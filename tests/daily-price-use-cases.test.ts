@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DailyPricePoint, DailyPriceQueryRepository } from "@/domain/daily-price";
 import { DataAccessError } from "@/domain/errors";
-import { getDailyPriceSnapshot, getDailyPriceSnapshotOrEmpty } from "@/server/daily-price-use-cases";
+import { getDailyPriceSnapshot, getDailyPriceSnapshotOrEmpty, getDailyPriceSnapshotsOrEmpty } from "@/server/daily-price-use-cases";
 
 class FixtureRepository implements DailyPriceQueryRepository {
   constructor(private readonly points: readonly DailyPricePoint[]) {}
@@ -59,5 +59,22 @@ describe("getDailyPriceSnapshot", () => {
       async findRecentByStockCode() { throw new Error("unexpected"); },
     };
     await expect(getDailyPriceSnapshotOrEmpty(repository, "005930", "1M")).rejects.toThrow("unexpected");
+  });
+
+  it("builds multiple snapshots from one batch repository request", async () => {
+    const repository: DailyPriceQueryRepository = {
+      async findRecentByStockCode() { return []; },
+      async findRecentByStockCodes() {
+        return {
+          "005930": [
+            { tradingDate: "2026-09-09", closePrice: 72_500, volume: 90, sourceId: "KRX_DAILY" },
+            { tradingDate: "2026-09-10", closePrice: 74_000, volume: 100, sourceId: "KRX_DAILY" },
+          ],
+        };
+      },
+    };
+    const result = await getDailyPriceSnapshotsOrEmpty(repository, ["005930", "000660"], "1M");
+    expect(result["005930"]?.changeAmount).toBe(1_500);
+    expect(result["000660"]?.points).toEqual([]);
   });
 });
