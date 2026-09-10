@@ -81,6 +81,9 @@ jobs:
       - name: Materialize disclosure events
         run: npx tsx src/jobs/collector/run-event-materialization.ts
 
+      - name: Collect OpenDART filing documents
+        run: npx tsx src/jobs/collector/run-disclosure-document-sync.ts
+
       - name: Generate prior-day watchlist alerts
         run: >-
           npx tsx src/jobs/collector/run-disclosure-alert-generation.ts

@@ -9,6 +9,7 @@
     "sync:companies": "tsx --env-file=.env.local src/jobs/collector/run-company-sync.ts",
     "sync:company-industries": "tsx --env-file=.env.local src/jobs/collector/run-company-industry-sync.ts",
     "sync:disclosures": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-sync.ts",
+    "sync:disclosure-documents": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-document-sync.ts",
     "sync:daily-prices": "tsx --env-file=.env.local src/jobs/collector/run-daily-price-sync.ts",
     "materialize:events": "tsx --env-file=.env.local src/jobs/collector/run-event-materialization.ts",
     "generate:disclosure-alerts": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-alert-generation.ts",

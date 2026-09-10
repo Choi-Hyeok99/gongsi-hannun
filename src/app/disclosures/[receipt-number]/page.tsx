@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EasyDisclosureTitle } from "@/components/EasyDisclosureTitle";
+import { DisclosureDocumentList } from "@/components/DisclosureDocumentList";
 import { ReturnToListButton } from "@/components/ReturnToListButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { createDisclosureDocumentRepository } from "@/data/supabase-disclosure-document-repository";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
 import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
+import { getDisclosureDocumentCollectionStatus, listDisclosureDocuments } from "@/server/disclosure-document-use-cases";
 import { findCorrectionTimeline, getDisclosure, listCompanyDisclosures } from "@/server/disclosure-use-cases";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +48,12 @@ export default async function DisclosureDetailPage({ params }: Props) {
     );
   }
 
-  const companyDisclosures = await listCompanyDisclosures(repository, disclosure.company.stockCode, 30);
+  const documentRepository = createDisclosureDocumentRepository();
+  const [companyDisclosures, documents, documentStatus] = await Promise.all([
+    listCompanyDisclosures(repository, disclosure.company.stockCode, 30),
+    listDisclosureDocuments(documentRepository, disclosure.receiptNumber),
+    getDisclosureDocumentCollectionStatus(documentRepository, disclosure.receiptNumber),
+  ]);
   const correctionTimeline = findCorrectionTimeline(disclosure, companyDisclosures);
 
   return (
@@ -68,6 +76,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             <div><dt>접수번호</dt><dd>{disclosure.receiptNumber}</dd></div>
             <div><dt>상태</dt><dd>{getStatusLabel(disclosure.status)}</dd></div>
           </dl>
+          <DisclosureDocumentList receiptNumber={disclosure.receiptNumber} documents={documents} status={documentStatus} />
           {correctionTimeline.length > 1 && (
             <section className="correction-timeline" aria-labelledby="correction-heading">
               <div><p className="eyebrow">최신본 확인</p><h2 id="correction-heading">정정공시 흐름</h2></div>
