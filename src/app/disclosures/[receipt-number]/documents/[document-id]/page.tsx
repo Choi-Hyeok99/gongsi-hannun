@@ -4,7 +4,7 @@ import { DocumentReaderTools } from "@/components/DocumentReaderTools";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createDisclosureDocumentRepository } from "@/data/supabase-disclosure-document-repository";
-import { getDisclosureDocument } from "@/server/disclosure-document-use-cases";
+import { getDisclosureDocument, listDisclosureDocuments } from "@/server/disclosure-document-use-cases";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DisclosureDocumentPage({ params }: Props) {
   const values = await params;
+  const repository = createDisclosureDocumentRepository();
   const document = await getDisclosureDocument(
-    createDisclosureDocumentRepository(),
+    repository,
     values["receipt-number"],
     values["document-id"],
   );
@@ -49,6 +50,11 @@ export default async function DisclosureDocumentPage({ params }: Props) {
       </div>
     );
   }
+
+  const documents = await listDisclosureDocuments(repository, document.receiptNumber);
+  const currentIndex = documents.findIndex((item) => item.id === document.id);
+  const previousDocument = currentIndex > 0 ? documents[currentIndex - 1] : null;
+  const nextDocument = currentIndex >= 0 ? documents[currentIndex + 1] ?? null : null;
 
   return (
     <div className="site-shell">
@@ -75,6 +81,13 @@ export default async function DisclosureDocumentPage({ params }: Props) {
             <Link className="primary-link" href={disclosureUrl}>공시 상세로 돌아가기</Link>
             <a className="secondary-link" href={`https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${document.receiptNumber}`} target="_blank" rel="noopener noreferrer">OpenDART 전체 원문</a>
           </div>
+          {documents.length > 1 ? (
+            <nav className="document-pagination" aria-label="공시 문서 이동">
+              {previousDocument ? <Link href={`${disclosureUrl}/documents/${previousDocument.id}`}>이전 문서</Link> : <span aria-disabled="true">이전 문서</span>}
+              <strong>{currentIndex + 1} / {documents.length}</strong>
+              {nextDocument ? <Link href={`${disclosureUrl}/documents/${nextDocument.id}`}>다음 문서</Link> : <span aria-disabled="true">다음 문서</span>}
+            </nav>
+          ) : null}
         </article>
       </main>
       <SiteFooter />
