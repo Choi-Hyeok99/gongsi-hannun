@@ -107,7 +107,18 @@ export type Company = Readonly<{
   industryCategory: CompanyIndustryCategory;
 }>;
 
+export type CompanyPage = Readonly<{
+  companies: readonly Company[];
+  total: number;
+}>;
+
 export interface CompanyRepository {
   search(query: string, limit: number, category?: CompanyIndustryCategory): Promise<readonly Company[]>;
+  searchPage(
+    query: string,
+    limit: number,
+    offset: number,
+    category?: CompanyIndustryCategory,
+  ): Promise<CompanyPage>;
   findByStockCode(stockCode: string): Promise<Company | null>;
 }

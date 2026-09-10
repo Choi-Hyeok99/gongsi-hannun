@@ -50,8 +50,12 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
           <span>{latestDate}</span>
         </div>
       )}
-      <small className="price-chart__notice">일별 종가 · 실시간 시세 아님</small>
-      {snapshot.sourceId === KRX_DAILY_SOURCE && (
+      {compact ? (
+        <small className="price-chart__notice">최근 1개월 일별 종가 · KRX</small>
+      ) : (
+        <small className="price-chart__notice">일별 종가 · 실시간 시세 아님</small>
+      )}
+      {!compact && snapshot.sourceId === KRX_DAILY_SOURCE && (
         <small className="price-chart__source">출처: 한국거래소 통계정보</small>
       )}
     </div>
@@ -77,7 +81,8 @@ function formatWon(value: number): string {
 function formatChange(amount: number | null, rate: number | null): string {
   if (amount === null || rate === null) return "전일 비교 준비 중";
   const prefix = amount > 0 ? "+" : "";
-  return `${prefix}${new Intl.NumberFormat("ko-KR").format(amount)}원 (${prefix}${rate.toFixed(2)}%)`;
+  const direction = amount > 0 ? "▲" : amount < 0 ? "▼" : "–";
+  return `${direction} ${prefix}${new Intl.NumberFormat("ko-KR").format(amount)}원 (${prefix}${rate.toFixed(2)}%)`;
 }
 
 function formatDate(value: string | undefined): string {
