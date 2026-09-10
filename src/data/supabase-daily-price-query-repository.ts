@@ -23,11 +23,12 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
       .maybeSingle();
     if (latestError) throw new DataAccessError("일별 주가를 조회하지 못했습니다.");
     if (!latest) return [];
+    const sourceId = String(latest.source);
 
     const { data, error } = await this.client
       .from("daily_prices")
       .select("trading_date,close_price,volume,companies!inner(stock_code)")
-      .eq("source", String(latest.source))
+      .eq("source", sourceId)
       .eq("companies.stock_code", stockCode)
       .order("trading_date", { ascending: false })
       .limit(limit);
@@ -36,6 +37,7 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
       tradingDate: row.trading_date,
       closePrice: Number(row.close_price),
       volume: Number(row.volume),
+      sourceId,
     }));
   }
 }

@@ -48,12 +48,14 @@ export type DailyPricePoint = Readonly<{
   tradingDate: string;
   closePrice: number;
   volume: number;
+  sourceId: string;
 }>;
 
 export type DailyPriceSnapshot = Readonly<{
   period: DailyPricePeriod;
   points: readonly DailyPricePoint[];
   latest: DailyPricePoint | null;
+  sourceId: string | null;
   changeAmount: number | null;
   changeRate: number | null;
 }>;
