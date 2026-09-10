@@ -24,12 +24,13 @@ export async function getDailyPriceSnapshot(
     .sort((left, right) => left.tradingDate.localeCompare(right.tradingDate));
   const latest = points.at(-1) ?? null;
   const previous = points.at(-2) ?? null;
+  const sourceId = latest?.sourceId ?? null;
   const changeAmount = latest && previous ? latest.closePrice - previous.closePrice : null;
   const changeRate = changeAmount !== null && previous && previous.closePrice > 0
     ? (changeAmount / previous.closePrice) * 100
     : null;
 
-  return { period, points, latest, changeAmount, changeRate };
+  return { period, points, latest, sourceId, changeAmount, changeRate };
 }
 
 export async function getDailyPriceSnapshotOrEmpty(
@@ -50,5 +51,5 @@ function parsePeriod(value: string | null): DailyPricePeriod {
 }
 
 function emptySnapshot(period: DailyPricePeriod): DailyPriceSnapshot {
-  return { period, points: [], latest: null, changeAmount: null, changeRate: null };
+  return { period, points: [], latest: null, sourceId: null, changeAmount: null, changeRate: null };
 }

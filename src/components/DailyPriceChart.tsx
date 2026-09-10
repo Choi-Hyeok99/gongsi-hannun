@@ -1,3 +1,4 @@
+import React from "react";
 import type { DailyPriceSnapshot } from "@/domain/daily-price";
 
 type Props = Readonly<{
@@ -9,6 +10,7 @@ type Props = Readonly<{
 const WIDTH = 640;
 const HEIGHT = 220;
 const PADDING = 12;
+const KRX_DAILY_SOURCE = "KRX_DAILY";
 
 export function DailyPriceChart({ companyName, snapshot, compact = false }: Props) {
   if (!snapshot.latest || snapshot.points.length < 2) {
@@ -49,6 +51,9 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
         </div>
       )}
       <small className="price-chart__notice">일별 종가 · 실시간 시세 아님</small>
+      {snapshot.sourceId === KRX_DAILY_SOURCE && (
+        <small className="price-chart__source">출처: 한국거래소 통계정보</small>
+      )}
     </div>
   );
 }
