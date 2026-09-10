@@ -26,7 +26,13 @@ alter table public.ingestion_runs
 
 alter table public.ingestion_runs
   add constraint ingestion_runs_job_type_check check (
-    job_type in ('COMPANY_SYNC', 'COMPANY_INDUSTRY_SYNC', 'DISCLOSURE_COLLECT', 'AI_ANALYZE')
+    job_type in (
+      'COMPANY_SYNC',
+      'COMPANY_INDUSTRY_SYNC',
+      'DISCLOSURE_COLLECT',
+      'AI_ANALYZE',
+      'DAILY_PRICE_SYNC'
+    )
   );
 
 create index if not exists companies_pending_industry_sync_idx
