@@ -51,7 +51,7 @@ export default async function WatchlistPage({ searchParams }: Props) {
         <section aria-labelledby="watchlist-heading">
           <div className="result-heading"><h2 id="watchlist-heading">저장한 기업</h2><span>{companies.length}개</span></div>
           {companies.length ? (
-            <div className="result-list">{companies.map((company) => (
+            <div className="watchlist-result-list">{companies.map((company) => (
               <WatchlistAlertCard company={company} preference={preferences.get(company.id)} key={company.id} />
             ))}</div>
           ) : (

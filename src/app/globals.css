@@ -125,6 +125,7 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .result-heading { align-items: center; }
 .result-heading span { color: var(--muted); font-size: 14px; font-weight: 800; }
 .result-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.watchlist-result-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .company-result { display: grid; align-content: start; gap: 10px; min-width: 0; padding: 15px; border-radius: 16px; }
 .company-result__heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .company-result__body { display: grid; min-width: 0; }
