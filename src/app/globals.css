@@ -286,7 +286,7 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .ai-summary-preview__viewport { overflow: hidden; border: 1px solid rgba(23, 105, 224, 0.15); border-radius: 14px; background: var(--surface); }
 .ai-summary-preview__slide { min-height: 224px; padding: 22px; }
 .ai-summary-preview__slide > p { margin: 0 0 7px; color: var(--primary); font-size: 13px; font-weight: 900; }
-.ai-summary-preview__slide h3 { max-width: 620px; font-size: clamp(19px, 3vw, 24px); line-height: 1.4; }
+.ai-summary-preview__slide h3 { max-width: 620px; font-size: clamp(18px, 2.4vw, 21px); line-height: 1.4; text-wrap: balance; }
 .ai-summary-preview__slide ul { display: grid; gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
 .ai-summary-preview__slide li { position: relative; padding-left: 18px; color: var(--text-strong-muted); font-size: 15px; }
 .ai-summary-preview__slide li::before { position: absolute; top: 0.58em; left: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); content: ""; }
