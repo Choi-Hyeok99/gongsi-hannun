@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { signUp } from "@/app/auth/actions";
+import { loginWithKakao, signUp } from "@/app/auth/actions";
 import { AuthMessage } from "@/components/AuthMessage";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -19,6 +19,13 @@ export default async function SignUpPage({ searchParams }: Props) {
           <h1 id="signup-heading">회원가입</h1>
           <p className="auth-description">이메일 인증 후 서비스를 이용할 수 있습니다.</p>
           <AuthMessage error={parameters.error} message={parameters.message} />
+          <form action={loginWithKakao}>
+            <button className="kakao-login-button" type="submit">
+              <span aria-hidden="true">●</span>
+              카카오로 간편 가입
+            </button>
+          </form>
+          <div className="auth-divider"><span>또는 이메일로 가입</span></div>
           <form className="auth-form" action={signUp}>
             <label>이메일<input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
             <label>비밀번호<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={72} aria-describedby="password-help" /></label>

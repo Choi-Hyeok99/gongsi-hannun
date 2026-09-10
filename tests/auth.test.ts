@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseEmailForm, parseLoginForm, parsePasswordUpdateForm, parseSignUpForm, safeRedirectPath } from "@/domain/auth";
+import { buildAuthCallbackUrl, parseEmailForm, parseLoginForm, parsePasswordUpdateForm, parseSignUpForm, safeRedirectPath } from "@/domain/auth";
 
 function form(values: Record<string, string>) {
   const data = new FormData();
@@ -37,5 +37,19 @@ describe("safeRedirectPath", () => {
   it("allows an internal path", () => expect(safeRedirectPath("/companies/005930")).toBe("/companies/005930"));
   it.each(["https://evil.example", "//evil.example", "/\\evil.example", null])("rejects unsafe redirect %s", (value) => {
     expect(safeRedirectPath(value)).toBe("/");
+  });
+});
+
+describe("buildAuthCallbackUrl", () => {
+  it("preserves a safe post-login destination", () => {
+    expect(buildAuthCallbackUrl("https://example.com", "/watchlist")).toBe(
+      "https://example.com/auth/callback?next=%2Fwatchlist",
+    );
+  });
+
+  it("drops an external post-login destination", () => {
+    expect(buildAuthCallbackUrl("https://example.com", "https://evil.example")).toBe(
+      "https://example.com/auth/callback",
+    );
   });
 });
