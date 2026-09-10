@@ -66,6 +66,37 @@ export function categorizeCompanyIndustry(sector: string | null): CompanyIndustr
   )?.category ?? "OTHER";
 }
 
+/** Maps the numeric industry code returned by OpenDART company.json. */
+export function categorizeCompanyIndustryCode(industryCode: string | null): CompanyIndustryCategory {
+  const code = industryCode?.trim() ?? "";
+  if (!/^[0-9]{2,6}$/.test(code)) return "UNCLASSIFIED";
+
+  if (code.startsWith("261")) return "SEMICONDUCTOR";
+  if (startsWithAny(code, ["21", "271", "7011", "7013", "86"])) return "BIO_HEALTHCARE";
+  if (startsWithAny(code, ["582", "62", "63"])) return "IT_SOFTWARE";
+  if (startsWithAny(code, ["26", "27", "28"])) return "ELECTRONICS";
+  if (code.startsWith("30")) return "AUTOMOTIVE";
+  if (startsWithAny(code, ["19", "20", "22", "23", "24"])) return "CHEMICAL_MATERIALS";
+  if (startsWithAny(code, ["35", "36"])) return "ENERGY_UTILITIES";
+  if (startsWithAny(code, ["64", "65", "66"])) return "FINANCE";
+  if (startsWithAny(code, ["45", "46", "47", "55", "56"])) return "CONSUMER_RETAIL";
+  if (startsWithAny(code, ["58", "59", "60", "61", "90"])) return "MEDIA_TELECOM";
+  if (startsWithAny(code, ["41", "42", "68"])) return "CONSTRUCTION_REAL_ESTATE";
+  if (startsWithAny(code, ["49", "50", "51", "52"])) return "TRANSPORT_LOGISTICS";
+  if (isBetween(Number(code.slice(0, 2)), 10, 34) || startsWithAny(code, ["38", "39"])) {
+    return "INDUSTRIAL_MANUFACTURING";
+  }
+  return "OTHER";
+}
+
+function startsWithAny(value: string, prefixes: readonly string[]): boolean {
+  return prefixes.some((prefix) => value.startsWith(prefix));
+}
+
+function isBetween(value: number, minimum: number, maximum: number): boolean {
+  return value >= minimum && value <= maximum;
+}
+
 export type Company = Readonly<{
   id: string;
   dartCorpCode: string;
