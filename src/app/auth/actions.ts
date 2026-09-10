@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import {
+  buildAuthCallbackUrl,
   parseEmailForm,
   parseLoginForm,
   parsePasswordUpdateForm,
@@ -24,6 +25,24 @@ export async function login(formData: FormData) {
   if (error) redirectWithMessage("/login", "error", "이메일 또는 비밀번호를 확인해 주세요.");
 
   redirect(safeRedirectPath(formData.get("next")?.toString() ?? null));
+}
+
+export async function loginWithKakao(formData: FormData) {
+  const next = safeRedirectPath(formData.get("next")?.toString() ?? null);
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "kakao",
+    options: {
+      redirectTo: buildAuthCallbackUrl(readSiteUrl(), next),
+      scopes: "profile_nickname",
+    },
+  });
+
+  if (error || !data.url) {
+    redirectWithMessage("/login", "error", "카카오 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  redirect(data.url);
 }
 
 export async function signUp(formData: FormData) {

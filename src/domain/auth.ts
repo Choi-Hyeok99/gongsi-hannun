@@ -90,3 +90,10 @@ export function safeRedirectPath(value: string | null, fallback = "/"): string {
   }
   return value;
 }
+
+export function buildAuthCallbackUrl(siteUrl: string, next: string | null): string {
+  const callbackUrl = new URL("/auth/callback", siteUrl);
+  const destination = safeRedirectPath(next);
+  if (destination !== "/") callbackUrl.searchParams.set("next", destination);
+  return callbackUrl.toString();
+}
