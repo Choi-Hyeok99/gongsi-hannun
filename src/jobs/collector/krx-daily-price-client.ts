@@ -5,12 +5,12 @@ import { ExternalServiceError } from "@/domain/errors";
 const BASE_URL = "https://data-dbg.krx.co.kr/svc/apis/sto";
 const MARKET_ENDPOINTS = ["stk_bydd_trd", "ksq_bydd_trd", "knx_bydd_trd"] as const;
 const KRX_DATE_PATTERN = /^\d{8}$/;
-const STOCK_CODE_PATTERN = /^\d{6}$/;
+const KRX_ISSUE_CODE_PATTERN = /^[0-9A-Z]{6}$/;
 const INTEGER_PATTERN = /^\d{1,24}$/;
 
 const rowSchema = z.object({
   BAS_DD: z.string().regex(KRX_DATE_PATTERN),
-  ISU_CD: z.string().regex(STOCK_CODE_PATTERN),
+  ISU_CD: z.string().regex(KRX_ISSUE_CODE_PATTERN),
   TDD_CLSPRC: z.string(),
   TDD_OPNPRC: z.string(),
   TDD_HGPRC: z.string(),
