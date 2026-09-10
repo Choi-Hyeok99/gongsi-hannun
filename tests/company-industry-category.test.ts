@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categorizeCompanyIndustry } from "@/domain/company";
+import { categorizeCompanyIndustry, categorizeCompanyIndustryCode } from "@/domain/company";
 
 describe("categorizeCompanyIndustry", () => {
   it.each([
@@ -19,5 +19,25 @@ describe("categorizeCompanyIndustry", () => {
 
   it("uses other for a supplied sector outside the canonical groups", () => {
     expect(categorizeCompanyIndustry("교육 서비스업")).toBe("OTHER");
+  });
+});
+
+describe("categorizeCompanyIndustryCode", () => {
+  it.each([
+    ["2612", "SEMICONDUCTOR"],
+    ["21210", "BIO_HEALTHCARE"],
+    ["62010", "IT_SOFTWARE"],
+    ["264", "ELECTRONICS"],
+    ["303", "AUTOMOTIVE"],
+    ["201", "CHEMICAL_MATERIALS"],
+    ["641", "FINANCE"],
+    ["501", "TRANSPORT_LOGISTICS"],
+  ] as const)("maps official code %s to %s", (code, expected) => {
+    expect(categorizeCompanyIndustryCode(code)).toBe(expected);
+  });
+
+  it("does not infer a category from a missing or invalid code", () => {
+    expect(categorizeCompanyIndustryCode(null)).toBe("UNCLASSIFIED");
+    expect(categorizeCompanyIndustryCode("unknown")).toBe("UNCLASSIFIED");
   });
 });
