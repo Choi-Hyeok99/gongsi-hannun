@@ -1,3 +1,5 @@
+import Link from "next/link";
+import React from "react";
 import {
   COMPANY_INDUSTRY_CATEGORIES,
   COMPANY_INDUSTRY_CATEGORY_LABELS,
@@ -9,19 +11,29 @@ type Props = Readonly<{
 }>;
 
 export function CompanyCategoryFilter({ query, selectedCategory = "" }: Props) {
+  const makeHref = (category = "") => {
+    const parameters = new URLSearchParams();
+    if (query) parameters.set("query", query);
+    if (category) parameters.set("category", category);
+    const suffix = parameters.toString();
+    return suffix ? `/search?${suffix}` : "/search";
+  };
+
   return (
-    <form action="/search" className="company-category-filter">
-      {query && <input name="query" type="hidden" value={query} />}
-      <label htmlFor="company-category">업종 카테고리</label>
-      <div className="company-category-filter__controls">
-        <select defaultValue={selectedCategory} id="company-category" name="category">
-          <option value="">전체 업종</option>
-          {COMPANY_INDUSTRY_CATEGORIES.map((category) => (
-            <option key={category} value={category}>{COMPANY_INDUSTRY_CATEGORY_LABELS[category]}</option>
-          ))}
-        </select>
-        <button type="submit">적용</button>
+    <nav aria-label="업종 카테고리" className="company-category-filter">
+      <span className="company-category-filter__label">업종</span>
+      <div className="company-category-filter__chips">
+        <Link aria-current={!selectedCategory ? "page" : undefined} href={makeHref()}>전체</Link>
+        {COMPANY_INDUSTRY_CATEGORIES.map((category) => (
+          <Link
+            aria-current={selectedCategory === category ? "page" : undefined}
+            href={makeHref(category)}
+            key={category}
+          >
+            {COMPANY_INDUSTRY_CATEGORY_LABELS[category]}
+          </Link>
+        ))}
       </div>
-    </form>
+    </nav>
   );
 }
