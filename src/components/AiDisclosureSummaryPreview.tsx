@@ -69,8 +69,8 @@ function createPreviewSlides({ companyName, reportName, disclosedOn, eventTypeLa
   return [
     {
       eyebrow: "한 줄 요약",
-      title: `${companyName}의 ${reportName} 공시입니다.`,
-      items: [`공시 유형: ${eventTypeLabel}`, `공시일: ${disclosedOn}`, "핵심 변화와 수치는 원문 확인이 필요합니다."],
+      title: `${companyName} · ${eventTypeLabel}`,
+      items: [`공시명: ${reportName}`, `공시일: ${disclosedOn}`, "핵심 변화와 수치는 원문 확인이 필요합니다."],
     },
     {
       eyebrow: "무엇이 달라졌나요?",

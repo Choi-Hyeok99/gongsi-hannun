@@ -11,7 +11,8 @@ describe("AiDisclosureSummaryPreview", () => {
 
     expect(markup).toContain("AI 공시 요약");
     expect(markup).toContain("예시 화면");
-    expect(markup).toContain("삼성전자의 사업보고서 공시입니다.");
+    expect(markup).toContain("삼성전자 · 정기보고");
+    expect(markup).toContain("공시명: 사업보고서");
     expect(markup).toContain("aria-roledescription=\"carousel\"");
     expect(markup).toContain("aria-label=\"이전 요약\"");
     expect(markup).toContain("aria-label=\"다음 요약\"");
