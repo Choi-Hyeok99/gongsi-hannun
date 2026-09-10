@@ -6,7 +6,12 @@ export class DataAccessError extends Error {
   readonly code = "DATA_ACCESS_ERROR";
 }
 
-export type ExternalServiceErrorCode = "RATE_LIMITED" | "UNAVAILABLE" | "INVALID_RESPONSE" | "TIMEOUT";
+export type ExternalServiceErrorCode =
+  | "AUTHENTICATION_FAILED"
+  | "RATE_LIMITED"
+  | "UNAVAILABLE"
+  | "INVALID_RESPONSE"
+  | "TIMEOUT";
 
 export class ExternalServiceError extends Error {
   constructor(readonly code: ExternalServiceErrorCode, message: string) {
