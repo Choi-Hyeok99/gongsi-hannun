@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AiDisclosureSummaryPreview } from "@/components/AiDisclosureSummaryPreview";
 import { EasyDisclosureTitle } from "@/components/EasyDisclosureTitle";
 import { DisclosureDocumentList } from "@/components/DisclosureDocumentList";
 import { ReturnToListButton } from "@/components/ReturnToListButton";
@@ -76,6 +77,12 @@ export default async function DisclosureDetailPage({ params }: Props) {
             <div><dt>접수번호</dt><dd>{disclosure.receiptNumber}</dd></div>
             <div><dt>상태</dt><dd>{getStatusLabel(disclosure.status)}</dd></div>
           </dl>
+          <AiDisclosureSummaryPreview
+            companyName={disclosure.company.name}
+            reportName={disclosure.reportName}
+            disclosedOn={disclosure.disclosedOn}
+            eventTypeLabel={getDisclosureEventTypeLabel(disclosure.eventType)}
+          />
           <DisclosureDocumentList receiptNumber={disclosure.receiptNumber} documents={documents} status={documentStatus} />
           {correctionTimeline.length > 1 && (
             <section className="correction-timeline" aria-labelledby="correction-heading">
