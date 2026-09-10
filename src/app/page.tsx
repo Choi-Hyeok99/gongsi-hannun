@@ -8,7 +8,7 @@ import { createDisclosureRepository } from "@/data/supabase-disclosure-repositor
 import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDailyPriceQueryRepository } from "@/data/supabase-daily-price-query-repository";
 import { getCompany } from "@/server/company-use-cases";
-import { getDailyPriceSnapshot } from "@/server/daily-price-use-cases";
+import { getDailyPriceSnapshotOrEmpty } from "@/server/daily-price-use-cases";
 import { listLatestDisclosures } from "@/server/disclosure-use-cases";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export default async function HomePage() {
   const companyRepository = createCompanyRepository();
   const [latestDisclosures, featuredPrices, featuredCompanyDetails] = await Promise.all([
     listLatestDisclosures(createDisclosureRepository(), 8),
-    Promise.all(featuredCompanies.map((company) => getDailyPriceSnapshot(dailyPriceRepository, company.stockCode, "1M"))),
+    Promise.all(featuredCompanies.map((company) => getDailyPriceSnapshotOrEmpty(dailyPriceRepository, company.stockCode, "1M"))),
     Promise.all(featuredCompanies.map((company) => getCompany(companyRepository, company.stockCode))),
   ]);
 

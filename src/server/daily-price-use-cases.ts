@@ -4,6 +4,7 @@ import {
   type DailyPriceQueryRepository,
   type DailyPriceSnapshot,
 } from "@/domain/daily-price";
+import { DataAccessError } from "@/domain/errors";
 
 const POINT_LIMITS: Readonly<Record<DailyPricePeriod, number>> = {
   "1M": 25,
@@ -29,6 +30,19 @@ export async function getDailyPriceSnapshot(
     : null;
 
   return { period, points, latest, changeAmount, changeRate };
+}
+
+export async function getDailyPriceSnapshotOrEmpty(
+  repository: DailyPriceQueryRepository,
+  stockCode: string,
+  rawPeriod: string | null,
+): Promise<DailyPriceSnapshot> {
+  try {
+    return await getDailyPriceSnapshot(repository, stockCode, rawPeriod);
+  } catch (error) {
+    if (error instanceof DataAccessError) return emptySnapshot(parsePeriod(rawPeriod));
+    throw error;
+  }
 }
 
 function parsePeriod(value: string | null): DailyPricePeriod {

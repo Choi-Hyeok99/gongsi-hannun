@@ -13,7 +13,7 @@ import { createWatchlistCompanyReader } from "@/data/supabase-watchlist-company-
 import { SupabaseWatchlistRepository } from "@/data/supabase-watchlist-repository";
 import { getCompany } from "@/server/company-use-cases";
 import { listCompanyDisclosures } from "@/server/disclosure-use-cases";
-import { getDailyPriceSnapshot } from "@/server/daily-price-use-cases";
+import { getDailyPriceSnapshotOrEmpty } from "@/server/daily-price-use-cases";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { getSavedState } from "@/server/watchlist-use-cases";
 
@@ -56,7 +56,7 @@ export default async function CompanyPage({ params, searchParams }: Props) {
 
   const [disclosures, priceSnapshot, supabase] = await Promise.all([
     listCompanyDisclosures(createDisclosureRepository(), stockCode, 10),
-    getDailyPriceSnapshot(createDailyPriceQueryRepository(), stockCode, status.period ?? null),
+    getDailyPriceSnapshotOrEmpty(createDailyPriceQueryRepository(), stockCode, status.period ?? null),
     createSupabaseServerClient(),
   ]);
   const { data: { user } } = await supabase.auth.getUser();
