@@ -99,3 +99,11 @@ jobs:
           npx tsx src/jobs/collector/run-daily-price-sync.ts
           --from "${{ steps.dates.outputs.collection_date }}"
           --to "${{ steps.dates.outputs.collection_date }}"
+
+      - name: Generate AI disclosure summaries
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.5-flash-lite
+          AI_ANALYSIS_LIMIT: "10"
+        run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts
