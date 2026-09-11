@@ -97,3 +97,7 @@ export function buildAuthCallbackUrl(siteUrl: string, next: string | null): stri
   if (destination !== "/") callbackUrl.searchParams.set("next", destination);
   return callbackUrl.toString();
 }
+
+export function buildTrustedSiteUrl(siteUrl: string, path: string | null): string {
+  return new URL(safeRedirectPath(path), siteUrl).toString();
+}
