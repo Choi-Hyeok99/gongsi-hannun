@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAuthCallbackUrl, parseEmailForm, parseLoginForm, parsePasswordUpdateForm, parseSignUpForm, safeRedirectPath } from "@/domain/auth";
+import { buildAuthCallbackUrl, buildTrustedSiteUrl, parseEmailForm, parseLoginForm, parsePasswordUpdateForm, parseSignUpForm, safeRedirectPath } from "@/domain/auth";
 
 function form(values: Record<string, string>) {
   const data = new FormData();
@@ -51,5 +51,15 @@ describe("buildAuthCallbackUrl", () => {
     expect(buildAuthCallbackUrl("https://example.com", "https://evil.example")).toBe(
       "https://example.com/auth/callback",
     );
+  });
+});
+
+describe("buildTrustedSiteUrl", () => {
+  it("uses the configured public site instead of a proxy request origin", () => {
+    expect(buildTrustedSiteUrl("https://preview.example", "/watchlist")).toBe("https://preview.example/watchlist");
+  });
+
+  it.each(["https://evil.example", "//evil.example", "/\\evil.example"])("rejects unsafe post-login destination %s", (path) => {
+    expect(buildTrustedSiteUrl("https://preview.example", path)).toBe("https://preview.example/");
   });
 });
