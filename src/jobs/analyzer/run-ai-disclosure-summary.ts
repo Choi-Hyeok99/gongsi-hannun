@@ -1,4 +1,4 @@
-import { createAiAnalysisRepository } from "@/data/supabase-ai-analysis-repository";
+import { createSupabaseAiAnalysisRepository } from "@/data/supabase-ai-analysis-repository";
 import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-cases";
 import { readAiAnalysisEnvironment } from "@/server/ai-env";
 import { GeminiDisclosureSummaryClient } from "./gemini-summary-client";
@@ -8,7 +8,10 @@ const ANALYSIS_VERSION = "disclosure-summary-v1";
 async function main() {
   const environment = readAiAnalysisEnvironment();
   const counts = await analyzePendingDisclosures(
-    createAiAnalysisRepository(),
+    createSupabaseAiAnalysisRepository({
+      supabaseUrl: environment.SUPABASE_URL,
+      supabaseSecretKey: environment.SUPABASE_SECRET_KEY,
+    }),
     new GeminiDisclosureSummaryClient({ apiKey: environment.GEMINI_API_KEY, model: environment.GEMINI_MODEL }),
     { limit: environment.AI_ANALYSIS_LIMIT, analysisVersion: ANALYSIS_VERSION },
   );

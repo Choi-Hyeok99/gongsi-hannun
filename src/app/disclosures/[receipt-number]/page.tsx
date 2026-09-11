@@ -6,7 +6,7 @@ import { DisclosureDocumentList } from "@/components/DisclosureDocumentList";
 import { ReturnToListButton } from "@/components/ReturnToListButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { createAiAnalysisRepository } from "@/data/supabase-ai-analysis-repository";
+import { createAiAnalysisRepository } from "@/data/server-ai-analysis-repository";
 import { createDisclosureDocumentRepository } from "@/data/supabase-disclosure-document-repository";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
 import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
