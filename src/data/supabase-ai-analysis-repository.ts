@@ -1,4 +1,3 @@
-import "server-only";
 import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
@@ -10,7 +9,11 @@ import type {
 } from "@/domain/ai-disclosure-summary";
 import { isDisclosureEventType } from "@/domain/disclosure-classification";
 import { DataAccessError } from "@/domain/errors";
-import { readServerEnvironment } from "@/server/env";
+
+type RepositoryOptions = Readonly<{
+  supabaseUrl: string;
+  supabaseSecretKey: string;
+}>;
 
 type JsonObject = Record<string, unknown>;
 
@@ -20,7 +23,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   async findCandidates(limit: number, analysisVersion: string): Promise<readonly AiAnalysisCandidate[]> {
     const { data, error } = await this.client
       .from("events")
-      .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,document_kind,sequence_no,content_text,content_sha256))")
+      .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,document_kind,sequence_no,content_text,content_hash))")
       .eq("visibility", "PUBLIC")
       .order("occurred_on", { ascending: false })
       .limit(Math.max(limit * 4, limit));
@@ -49,7 +52,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       if (!disclosure || !company || !mainDocument || !contentText) continue;
       const receiptNumber = String(disclosure.receipt_no);
       const reportName = String(disclosure.report_name);
-      const contentHash = String(mainDocument.content_sha256 ?? "");
+      const contentHash = String(mainDocument.content_hash ?? "");
       candidates.push({
         eventId,
         receiptNumber,
@@ -160,9 +163,8 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   }
 }
 
-export function createAiAnalysisRepository(): AiAnalysisRepository {
-  const environment = readServerEnvironment();
-  return new SupabaseAiAnalysisRepository(createClient(environment.SUPABASE_URL, environment.SUPABASE_SECRET_KEY, {
+export function createSupabaseAiAnalysisRepository(options: RepositoryOptions): AiAnalysisRepository {
+  return new SupabaseAiAnalysisRepository(createClient(options.supabaseUrl, options.supabaseSecretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   }));
 }

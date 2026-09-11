@@ -5,7 +5,7 @@ import type {
   GeneratedAiDisclosureSummary,
 } from "@/domain/ai-disclosure-summary";
 
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 const MAX_DOCUMENT_CHARACTERS = 14_000;
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -86,7 +86,6 @@ function buildRequest(candidate: AiAnalysisCandidate) {
       responseMimeType: "application/json",
       responseSchema: {
         type: "object",
-        additionalProperties: false,
         properties: {
           plainSummary: { type: "string", description: "핵심 사실을 담은 두 문장 이내 요약" },
           whyItMatters: { type: "string", description: "개인투자자에게 중요한 이유를 쉬운 말로 설명" },
