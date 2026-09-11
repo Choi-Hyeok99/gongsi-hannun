@@ -16,7 +16,7 @@ export function DisclosureDocumentList({ receiptNumber, documents, status }: Pro
   const attachments = documents.filter((document) => document.id !== mainDocument?.id);
 
   return (
-    <section className="filing-documents" aria-labelledby="filing-documents-heading">
+    <section id="filing-documents" className="filing-documents" aria-labelledby="filing-documents-heading">
       <div className="filing-documents__heading">
         <div><p className="eyebrow">제출 문서</p><h2 id="filing-documents-heading">본문과 첨부문서</h2></div>
         {documents.length > 0 ? <strong>{documents.length}개</strong> : null}
