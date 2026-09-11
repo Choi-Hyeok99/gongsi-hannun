@@ -14,7 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <head>
         <script dangerouslySetInnerHTML={{ __html: `try{const saved=localStorage.getItem("gongsi-theme");const theme=saved==="dark"||saved==="light"?saved:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=theme}catch{}` }} />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <ThemeToggle />
       </body>
