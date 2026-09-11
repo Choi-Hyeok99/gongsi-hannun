@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
+import type { AiDisclosureSummary } from "@/domain/ai-disclosure-summary";
 
 type Props = Readonly<{
   companyName: string;
   reportName: string;
   disclosedOn: string;
   eventTypeLabel: string;
+  summary?: AiDisclosureSummary | null;
 }>;
 
 type SummarySlide = Readonly<{
@@ -15,9 +17,9 @@ type SummarySlide = Readonly<{
   items: readonly string[];
 }>;
 
-export function AiDisclosureSummaryPreview({ companyName, reportName, disclosedOn, eventTypeLabel }: Props) {
+export function AiDisclosureSummaryPreview(props: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const slides = createPreviewSlides({ companyName, reportName, disclosedOn, eventTypeLabel });
+  const slides = props.summary ? createSummarySlides(props) : createPreviewSlides(props);
   const activeSlide = slides[activeIndex] ?? slides[0];
 
   const move = (direction: -1 | 1) => {
@@ -31,7 +33,7 @@ export function AiDisclosureSummaryPreview({ companyName, reportName, disclosedO
           <p className="eyebrow">빠르게 이해하기</p>
           <h2 id="ai-summary-heading">AI 공시 요약</h2>
         </div>
-        <span className="ai-summary-preview__badge">예시 화면</span>
+        <span className="ai-summary-preview__badge">{props.summary ? "AI 생성" : "예시 화면"}</span>
       </div>
 
       <div className="ai-summary-preview__viewport" role="region" aria-roledescription="carousel" aria-label="AI 요약 미리보기">
@@ -60,9 +62,32 @@ export function AiDisclosureSummaryPreview({ companyName, reportName, disclosedO
         </div>
       </div>
 
-      <p className="ai-summary-preview__notice">현재는 화면 예시입니다. API 연동 후 공시 원문을 기준으로 자동 생성됩니다.</p>
+      <p className="ai-summary-preview__notice">
+        {props.summary ? "AI가 생성한 참고용 요약입니다. 중요한 판단 전 원문을 확인하세요." : "현재는 화면 예시입니다. API 연동 후 공시 원문을 기준으로 자동 생성됩니다."}
+      </p>
     </section>
   );
+}
+
+function createSummarySlides({ companyName, reportName, disclosedOn, eventTypeLabel, summary }: Props): readonly [SummarySlide, SummarySlide, SummarySlide] {
+  if (!summary) return createPreviewSlides({ companyName, reportName, disclosedOn, eventTypeLabel });
+  return [
+    {
+      eyebrow: "한 줄 요약",
+      title: `${companyName} · ${eventTypeLabel}`,
+      items: [summary.plainSummary, `공시명: ${reportName}`, `공시일: ${disclosedOn}`],
+    },
+    {
+      eyebrow: "왜 중요한가요?",
+      title: "투자자가 살펴볼 변화",
+      items: [summary.whyItMatters, ...summary.checkpoints].slice(0, 4),
+    },
+    {
+      eyebrow: "투자자 체크",
+      title: "원문에서 확인할 항목",
+      items: summary.cautions,
+    },
+  ];
 }
 
 function createPreviewSlides({ companyName, reportName, disclosedOn, eventTypeLabel }: Props): readonly [SummarySlide, SummarySlide, SummarySlide] {
