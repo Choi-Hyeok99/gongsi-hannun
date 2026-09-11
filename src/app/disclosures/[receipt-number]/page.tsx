@@ -6,9 +6,11 @@ import { DisclosureDocumentList } from "@/components/DisclosureDocumentList";
 import { ReturnToListButton } from "@/components/ReturnToListButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { createAiAnalysisRepository } from "@/data/supabase-ai-analysis-repository";
 import { createDisclosureDocumentRepository } from "@/data/supabase-disclosure-document-repository";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
 import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
+import { getPublishedAiSummary } from "@/server/ai-disclosure-summary-use-cases";
 import { getDisclosureDocumentCollectionStatus, listDisclosureDocuments } from "@/server/disclosure-document-use-cases";
 import { findCorrectionTimeline, getDisclosure, listCompanyDisclosures } from "@/server/disclosure-use-cases";
 
@@ -50,10 +52,11 @@ export default async function DisclosureDetailPage({ params }: Props) {
   }
 
   const documentRepository = createDisclosureDocumentRepository();
-  const [companyDisclosures, documents, documentStatus] = await Promise.all([
+  const [companyDisclosures, documents, documentStatus, aiSummary] = await Promise.all([
     listCompanyDisclosures(repository, disclosure.company.stockCode, 30),
     listDisclosureDocuments(documentRepository, disclosure.receiptNumber),
     getDisclosureDocumentCollectionStatus(documentRepository, disclosure.receiptNumber),
+    getPublishedAiSummary(createAiAnalysisRepository(), disclosure.receiptNumber).catch(() => null),
   ]);
   const correctionTimeline = findCorrectionTimeline(disclosure, companyDisclosures);
 
@@ -82,6 +85,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             reportName={disclosure.reportName}
             disclosedOn={disclosure.disclosedOn}
             eventTypeLabel={getDisclosureEventTypeLabel(disclosure.eventType)}
+            summary={aiSummary}
           />
           <DisclosureDocumentList receiptNumber={disclosure.receiptNumber} documents={documents} status={documentStatus} />
           {correctionTimeline.length > 1 && (
