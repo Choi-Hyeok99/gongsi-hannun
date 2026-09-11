@@ -25,13 +25,14 @@ type SourceRow = Readonly<{
 export class SupabaseDisclosureEventRepository implements DisclosureEventRepository {
   constructor(private readonly client: SupabaseClient) {}
 
-  async findSourceBatch(afterId: string | null, limit: number): Promise<readonly EventSourceDisclosure[]> {
+  async findSourceBatch(afterId: string | null, limit: number, disclosedOn?: string): Promise<readonly EventSourceDisclosure[]> {
     let request = this.client
       .from("source_disclosures")
       .select("id,company_id,report_name,disclosed_on,disclosure_status")
       .order("id", { ascending: true })
       .limit(limit);
     if (afterId) request = request.gt("id", afterId);
+    if (disclosedOn) request = request.eq("disclosed_on", disclosedOn);
     const { data, error } = await request;
     if (error) throw new DataAccessError("이벤트 변환 대상 공시를 조회하지 못했습니다.");
     return ((data ?? []) as SourceRow[]).map((row) => ({

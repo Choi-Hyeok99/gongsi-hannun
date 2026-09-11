@@ -10,9 +10,13 @@ import {
 export async function materializeDisclosureEvents(
   repository: DisclosureEventRepository,
   batchSize = 300,
+  disclosedOn?: string,
 ): Promise<EventMaterializationCounts> {
   if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 1_000) {
     throw new RangeError("이벤트 변환 배치 크기가 올바르지 않습니다.");
+  }
+  if (disclosedOn && !/^\d{4}-\d{2}-\d{2}$/.test(disclosedOn)) {
+    throw new RangeError("이벤트 변환 날짜가 올바르지 않습니다.");
   }
 
   let afterId: string | null = null;
@@ -21,7 +25,7 @@ export async function materializeDisclosureEvents(
   let updatedCount = 0;
 
   while (true) {
-    const disclosures = await repository.findSourceBatch(afterId, batchSize);
+    const disclosures = await repository.findSourceBatch(afterId, batchSize, disclosedOn);
     if (disclosures.length === 0) break;
 
     const events = disclosures.map(toMaterializedEvent);

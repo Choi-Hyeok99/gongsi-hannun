@@ -33,8 +33,10 @@ const disclosures: readonly EventSourceDisclosure[] = [
 
 class MemoryEventRepository implements DisclosureEventRepository {
   readonly events = new Map<string, MaterializedDisclosureEvent>();
+  lastDisclosedOn: string | undefined;
 
-  async findSourceBatch(afterId: string | null, limit: number): Promise<readonly EventSourceDisclosure[]> {
+  async findSourceBatch(afterId: string | null, limit: number, disclosedOn?: string): Promise<readonly EventSourceDisclosure[]> {
+    this.lastDisclosedOn = disclosedOn;
     return disclosures.filter((item) => !afterId || item.id > afterId).slice(0, limit);
   }
 
@@ -81,6 +83,13 @@ describe("materializeDisclosureEvents", () => {
   it("rejects unsafe batch sizes before reading data", async () => {
     const repository = new MemoryEventRepository();
     await expect(materializeDisclosureEvents(repository, 0)).rejects.toBeInstanceOf(RangeError);
+  });
+
+  it("passes an optional disclosure date to incremental repositories", async () => {
+    const repository = new MemoryEventRepository();
+    await materializeDisclosureEvents(repository, 300, "2026-09-11");
+    expect(repository.lastDisclosedOn).toBe("2026-09-11");
+    await expect(materializeDisclosureEvents(repository, 300, "20260911")).rejects.toBeInstanceOf(RangeError);
   });
 });
 
