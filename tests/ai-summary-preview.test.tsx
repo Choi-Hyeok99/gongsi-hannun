@@ -9,13 +9,19 @@ describe("AiDisclosureSummaryPreview", () => {
       <AiDisclosureSummaryPreview companyName="삼성전자" reportName="사업보고서" disclosedOn="2026-09-10" eventTypeLabel="정기보고" />,
     );
 
-    expect(markup).toContain("AI 공시 요약");
+    expect(markup).toContain("AI 공시 분석");
     expect(markup).toContain("예시 화면");
     expect(markup).toContain("삼성전자 · 정기보고");
     expect(markup).toContain("공시명: 사업보고서");
     expect(markup).toContain("aria-roledescription=\"carousel\"");
     expect(markup).toContain("aria-label=\"이전 요약\"");
     expect(markup).toContain("aria-label=\"다음 요약\"");
+    expect(markup).toContain("한눈 요약");
+    expect(markup).toContain("심층 리포트");
+    expect(markup).toContain("이번 공시에서 달라진 점");
+    expect(markup).toContain("핵심 숫자 변화");
+    expect(markup).toContain("기회 요인과 위험 요인");
+    expect(markup).toContain("원문 근거");
   });
 
   it("shows a stored AI summary without the sample label", () => {
