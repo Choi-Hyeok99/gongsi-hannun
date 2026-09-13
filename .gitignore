@@ -1,7 +1,13 @@
 node_modules/
 .next/
+.open-next/
+.wrangler/
 .env
 .env.local
 .env.*.local
+.dev.vars
+.dev.vars.*
 coverage/
 *.tsbuildinfo
+docs/local-work-log.md
+preview-server*.log

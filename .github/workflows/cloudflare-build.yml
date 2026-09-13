@@ -1,0 +1,43 @@
+name: Cloudflare build
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run application checks
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+
+      - name: Build Cloudflare Worker
+        run: pnpm exec opennextjs-cloudflare build
+
+      - name: Validate Wrangler package
+        run: pnpm exec wrangler deploy --dry-run

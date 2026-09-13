@@ -1,0 +1,109 @@
+name: Daily market data collection
+
+on:
+  schedule:
+    # 09:30 UTC is 18:30 KST. GitHub Actions schedules always use UTC.
+    - cron: "30 9 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      collection_date:
+        description: "KST collection date (YYYY-MM-DD); defaults to today in Korea"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gongsi-data-pipeline
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
+      KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve KST collection range
+        id: dates
+        env:
+          REQUESTED_DATE: ${{ github.event.inputs.collection_date || '' }}
+        run: |
+          node <<'NODE'
+          const requested = process.env.REQUESTED_DATE?.trim();
+          const today = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Seoul",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date());
+          const collectionDate = requested || today;
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(collectionDate)) {
+            throw new Error("collection_date must use YYYY-MM-DD format");
+          }
+          const previous = new Date(`${collectionDate}T00:00:00.000Z`);
+          previous.setUTCDate(previous.getUTCDate() - 1);
+          const previousDate = previous.toISOString().slice(0, 10);
+          const output = process.env.GITHUB_OUTPUT;
+          require("node:fs").appendFileSync(output, [
+            `collection_date=${collectionDate}`,
+            `previous_date=${previousDate}`,
+            `dart_from=${previousDate.replaceAll("-", "")}`,
+            `dart_to=${collectionDate.replaceAll("-", "")}`,
+            "",
+          ].join("\n"));
+          NODE
+
+      - name: Collect OpenDART disclosures
+        run: >-
+          npx tsx src/jobs/collector/run-disclosure-sync.ts
+          "${{ steps.dates.outputs.dart_from }}"
+          "${{ steps.dates.outputs.dart_to }}"
+
+      - name: Materialize disclosure events
+        run: npx tsx src/jobs/collector/run-event-materialization.ts
+
+      - name: Collect OpenDART filing documents
+        run: npx tsx src/jobs/collector/run-disclosure-document-sync.ts
+
+      - name: Generate prior-day watchlist alerts
+        run: >-
+          npx tsx src/jobs/collector/run-disclosure-alert-generation.ts
+          "${{ steps.dates.outputs.previous_date }}"
+
+      - name: Generate collection-day watchlist alerts
+        run: >-
+          npx tsx src/jobs/collector/run-disclosure-alert-generation.ts
+          "${{ steps.dates.outputs.collection_date }}"
+
+      - name: Collect KRX daily prices
+        run: >-
+          npx tsx src/jobs/collector/run-daily-price-sync.ts
+          --from "${{ steps.dates.outputs.collection_date }}"
+          --to "${{ steps.dates.outputs.collection_date }}"
+
+      - name: Generate AI disclosure summaries
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.5-flash-lite
+          AI_ANALYSIS_LIMIT: "10"
+        run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts

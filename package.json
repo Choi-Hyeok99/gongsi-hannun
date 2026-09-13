@@ -6,11 +6,26 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint .",
+    "sync:companies": "tsx --env-file=.env.local src/jobs/collector/run-company-sync.ts",
+    "sync:company-industries": "tsx --env-file=.env.local src/jobs/collector/run-company-industry-sync.ts",
+    "sync:disclosures": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-sync.ts",
+    "sync:disclosure-documents": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-document-sync.ts",
+    "sync:daily-prices": "tsx --env-file=.env.local src/jobs/collector/run-daily-price-sync.ts",
+    "materialize:events": "tsx --env-file=.env.local src/jobs/collector/run-event-materialization.ts",
+    "generate:disclosure-alerts": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-alert-generation.ts",
+    "analyze:disclosures": "tsx --env-file=.env.local src/jobs/analyzer/run-ai-disclosure-summary.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.6",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.57.4",
+    "fast-xml-parser": "^5.11.1",
+    "fflate": "^0.8.3",
     "next": "^15.5.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -23,7 +38,9 @@
     "@types/react-dom": "^19.1.9",
     "eslint": "^9.35.0",
     "eslint-config-next": "^15.5.3",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.130.0"
   }
 }

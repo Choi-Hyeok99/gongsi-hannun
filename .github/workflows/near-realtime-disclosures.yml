@@ -1,0 +1,96 @@
+name: Near real-time disclosure pipeline
+
+on:
+  schedule:
+    # Every 10 minutes from 08:00 to 20:59 KST on weekdays.
+    - cron: "*/10 23 * * 0-4"
+    - cron: "*/10 0-11 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      collection_date:
+        description: "KST collection date (YYYY-MM-DD); defaults to today in Korea"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gongsi-data-pipeline
+  cancel-in-progress: false
+
+jobs:
+  collect-disclosures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve KST collection date
+        id: dates
+        env:
+          REQUESTED_DATE: ${{ github.event.inputs.collection_date || '' }}
+        run: |
+          node <<'NODE'
+          const requested = process.env.REQUESTED_DATE?.trim();
+          const collectionDate = requested || new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Seoul",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date());
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(collectionDate)) {
+            throw new Error("collection_date must use YYYY-MM-DD format");
+          }
+          require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, [
+            `collection_date=${collectionDate}`,
+            `dart_date=${collectionDate.replaceAll("-", "")}`,
+            "",
+          ].join("\n"));
+          NODE
+
+      - name: Collect new OpenDART disclosures
+        run: >-
+          npx tsx src/jobs/collector/run-disclosure-sync.ts
+          "${{ steps.dates.outputs.dart_date }}"
+          "${{ steps.dates.outputs.dart_date }}"
+
+      - name: Materialize new disclosure events
+        run: >-
+          npx tsx src/jobs/collector/run-event-materialization.ts
+          "${{ steps.dates.outputs.collection_date }}"
+
+      - name: Generate watchlist alerts
+        run: >-
+          npx tsx src/jobs/collector/run-disclosure-alert-generation.ts
+          "${{ steps.dates.outputs.collection_date }}"
+
+      - name: Collect new filing documents
+        continue-on-error: true
+        env:
+          DISCLOSURE_DOCUMENT_SYNC_LIMIT: "20"
+        run: npx tsx src/jobs/collector/run-disclosure-document-sync.ts
+
+      - name: Generate AI summaries for ready filings
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.5-flash-lite
+          AI_ANALYSIS_LIMIT: "5"
+        run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts
