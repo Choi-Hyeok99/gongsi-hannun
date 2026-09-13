@@ -32,7 +32,7 @@ export type EventMaterializationCounts = Readonly<{
 }>;
 
 export interface DisclosureEventRepository {
-  findSourceBatch(afterId: string | null, limit: number): Promise<readonly EventSourceDisclosure[]>;
+  findSourceBatch(afterId: string | null, limit: number, disclosedOn?: string): Promise<readonly EventSourceDisclosure[]>;
   upsertEvents(events: readonly MaterializedDisclosureEvent[]): Promise<Readonly<{ createdCount: number; updatedCount: number }>>;
 }
 
