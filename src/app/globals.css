@@ -106,6 +106,13 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .section { padding-block: 56px; }
 .section-heading, .result-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
 .text-link { color: var(--primary); font-size: 14px; font-weight: 800; }
+.home-collection-status { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; margin: -8px 0 18px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.home-collection-status p { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; margin: 0; font-size: 12px; }
+.home-collection-status p > span:last-child { color: var(--muted); }
+.home-collection-status small { color: var(--muted); font-size: 11px; text-align: right; }
+.home-collection-status__indicator { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 999px; background: #168a55; }
+.home-collection-status[data-state="DELAYED"] .home-collection-status__indicator { background: #d97706; }
+.home-collection-status[data-state="OUTSIDE_COLLECTION_HOURS"] .home-collection-status__indicator, .home-collection-status[data-state="UNAVAILABLE"] .home-collection-status__indicator { background: #98a2b3; }
 .featured-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .featured-card, .company-result { display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 5px 18px rgba(31, 49, 77, 0.04); transition: transform 150ms ease, border-color 150ms ease; }
 .featured-card { display: grid; gap: 9px; min-width: 0; padding: 14px; border-radius: 16px; }
@@ -588,6 +595,8 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   .search-form input { padding-inline: 10px; }
   .search-form button { padding-inline: 17px; }
   .section { padding-block: 40px; }
+  .home-collection-status { align-items: flex-start; flex-direction: column; }
+  .home-collection-status small { text-align: left; }
   .featured-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
   .featured-card { padding: 12px; }
   .featured-card .company-avatar { width: 36px; height: 36px; }
