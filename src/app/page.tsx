@@ -81,7 +81,7 @@ export default async function HomePage() {
         <section className="content-container section" aria-labelledby="home-disclosures-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">실시간 업데이트</p>
+              <p className="eyebrow">평일 10분 간격 수집</p>
               <h2 id="home-disclosures-heading">오늘의 주요 공시</h2>
             </div>
             <Link className="text-link" href="/disclosures">전체 공시 보기</Link>
