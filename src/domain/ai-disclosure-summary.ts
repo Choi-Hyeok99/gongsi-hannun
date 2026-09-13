@@ -9,6 +9,10 @@ export type AiDisclosureSummary = Readonly<{
   generatedAt: string;
 }>;
 
+export type AiDisclosureSummaryState =
+  | Readonly<{ status: "NOT_GENERATED" | "PENDING" | "FAILED"; summary: null }>
+  | Readonly<{ status: "READY"; summary: AiDisclosureSummary }>;
+
 export type AiAnalysisCandidate = Readonly<{
   eventId: string;
   receiptNumber: string;
