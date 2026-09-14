@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
+  CompanyIndustryCompleteness,
   CompanyIndustryProfile,
+  CompanyIndustrySyncRunOptions,
   CompanyIndustrySyncCounts,
   CompanyIndustrySyncRepository,
   CompanyIndustrySyncTarget,
@@ -16,23 +18,36 @@ type RepositoryOptions = Readonly<{
 export class SupabaseCompanyIndustrySyncRepository implements CompanyIndustrySyncRepository {
   constructor(private readonly client: SupabaseClient) {}
 
-  async startRun(): Promise<string> {
+  async startRun(options: CompanyIndustrySyncRunOptions): Promise<string> {
     const { data, error } = await this.client
       .from("ingestion_runs")
-      .insert({ job_type: "COMPANY_INDUSTRY_SYNC", status: "RUNNING" })
+      .insert({
+        job_type: "COMPANY_INDUSTRY_SYNC",
+        status: "RUNNING",
+        metadata: {
+          limit: options.limit,
+          starting_after_id: options.startingAfterId ?? null,
+          retry_before: options.retryBefore,
+        },
+      })
       .select("id")
       .single();
     if (error || !data) throw new DataAccessError("업종 동기화 실행 기록을 만들지 못했습니다.");
     return String(data.id);
   }
 
-  async findPending(limit: number, afterId?: string): Promise<readonly CompanyIndustrySyncTarget[]> {
+  async findPending(
+    limit: number,
+    afterId: string | undefined,
+    retryBefore: string,
+  ): Promise<readonly CompanyIndustrySyncTarget[]> {
     let request = this.client
       .from("companies")
       .select("id,dart_corp_code")
       .eq("is_active", true)
       .eq("is_listed", true)
       .is("industry_profile_synced_at", null)
+      .or(`industry_profile_attempted_at.is.null,industry_profile_attempted_at.lt.${retryBefore}`)
       .order("id")
       .limit(limit);
     if (afterId) request = request.gt("id", afterId);
@@ -82,6 +97,33 @@ export class SupabaseCompanyIndustrySyncRepository implements CompanyIndustrySyn
     return count ?? 0;
   }
 
+  async getCompleteness(): Promise<CompanyIndustryCompleteness> {
+    const base = () => this.client
+      .from("companies")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true)
+      .eq("is_listed", true);
+    const [total, marketOther, categoryOther, categoryUnclassified, profilePending, profileFailed] = await Promise.all([
+      base(),
+      base().eq("market", "OTHER"),
+      base().eq("industry_category", "OTHER"),
+      base().eq("industry_category", "UNCLASSIFIED"),
+      base().is("industry_profile_synced_at", null),
+      base().is("industry_profile_synced_at", null).not("industry_profile_error_code", "is", null),
+    ]);
+    const error = [total, marketOther, categoryOther, categoryUnclassified, profilePending, profileFailed]
+      .find((result) => result.error)?.error;
+    if (error) throw new DataAccessError("기업 분류 완결성을 계산하지 못했습니다.");
+    return {
+      totalActiveListedCount: total.count ?? 0,
+      marketOtherCount: marketOther.count ?? 0,
+      categoryOtherCount: categoryOther.count ?? 0,
+      categoryUnclassifiedCount: categoryUnclassified.count ?? 0,
+      profilePendingCount: profilePending.count ?? 0,
+      profileFailedCount: profileFailed.count ?? 0,
+    };
+  }
+
   async finishRun(
     runId: string,
     counts: CompanyIndustrySyncCounts,
@@ -96,7 +138,11 @@ export class SupabaseCompanyIndustrySyncRepository implements CompanyIndustrySyn
         updated_count: counts.updatedCount,
         failed_count: counts.failedCount,
         error_code: stoppedReason?.slice(0, 100) ?? null,
-        metadata: { remaining_count: counts.remainingCount, stopped_reason: stoppedReason ?? null },
+        metadata: {
+          remaining_count: counts.remainingCount,
+          next_cursor: counts.nextCursor,
+          stopped_reason: stoppedReason ?? null,
+        },
       })
       .eq("id", runId);
     if (error) throw new DataAccessError("업종 동기화 실행 결과를 저장하지 못했습니다.");

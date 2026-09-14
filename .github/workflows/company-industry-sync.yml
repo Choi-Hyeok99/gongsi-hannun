@@ -1,0 +1,56 @@
+name: Incremental company industry sync
+
+on:
+  schedule:
+    # 19:15 UTC is 04:15 KST. A small weekday batch avoids exhausting OpenDART limits.
+    - cron: "15 19 * * 0-4"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Maximum companies to request (1-500)"
+        required: true
+        default: "250"
+        type: string
+      after_id:
+        description: "Optional company UUID cursor; rows up to this ID are skipped"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gongsi-company-industry-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
+      COMPANY_INDUSTRY_SYNC_LIMIT: ${{ inputs.limit || '250' }}
+      COMPANY_INDUSTRY_SYNC_AFTER_ID: ${{ inputs.after_id || '' }}
+      COMPANY_INDUSTRY_SYNC_DELAY_MS: "150"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync one bounded company batch
+        run: npx tsx src/jobs/collector/run-company-industry-sync.ts
+
+      - name: Report company data completeness
+        run: npx tsx src/jobs/collector/verify-company-data-completeness.ts

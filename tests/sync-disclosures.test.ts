@@ -22,7 +22,7 @@ const disclosure: DisclosureRecord = {
 function createRepository(): DisclosureSyncRepository {
   return {
     startRun: vi.fn(async () => "run-id"),
-    upsertDisclosures: vi.fn(async (records) => ({
+    upsertDisclosures: vi.fn(async (_runId, _collectedAt, records) => ({
       readCount: records.length,
       createdCount: records.length,
       updatedCount: 0,
@@ -45,10 +45,11 @@ describe("syncDisclosures", () => {
     };
     const repository = createRepository();
 
-    await expect(syncDisclosures(repositoryDependencies(source, repository), "20260909", "20260909"))
+    const now = new Date("2026-09-09T01:23:45.000Z");
+    await expect(syncDisclosures({ ...repositoryDependencies(source, repository), now: () => now }, "20260909", "20260909"))
       .resolves.toEqual({ readCount: 1, createdCount: 1, updatedCount: 0, failedCount: 0 });
     expect(source.fetchPage).toHaveBeenCalledTimes(4);
-    expect(repository.upsertDisclosures).toHaveBeenCalledWith([disclosure]);
+    expect(repository.upsertDisclosures).toHaveBeenCalledWith("run-id", now.toISOString(), [disclosure]);
     expect(repository.completeRun).toHaveBeenCalledOnce();
   });
 

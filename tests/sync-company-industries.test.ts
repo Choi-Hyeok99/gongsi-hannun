@@ -20,6 +20,14 @@ function createRepository(remainingCount = 0): CompanyIndustrySyncRepository {
     saveProfile: vi.fn(async () => undefined),
     recordFailure: vi.fn(async () => undefined),
     countPending: vi.fn(async () => remainingCount),
+    getCompleteness: vi.fn(async () => ({
+      totalActiveListedCount: targets.length,
+      marketOtherCount: 0,
+      categoryOtherCount: 0,
+      categoryUnclassifiedCount: 0,
+      profilePendingCount: remainingCount,
+      profileFailedCount: 0,
+    })),
     finishRun: vi.fn(async () => undefined),
   };
 }
@@ -36,6 +44,7 @@ describe("syncCompanyIndustries", () => {
       updatedCount: 3,
       failedCount: 0,
       remainingCount: 0,
+      nextCursor: "3",
     });
     expect(repository.saveProfile).toHaveBeenCalledTimes(3);
     expect(repository.saveProfile).toHaveBeenCalledWith(targets[0], expect.anything(), "SEMICONDUCTOR");
@@ -56,6 +65,7 @@ describe("syncCompanyIndustries", () => {
       updatedCount: 2,
       failedCount: 1,
       remainingCount: 1,
+      nextCursor: "3",
     });
     expect(repository.recordFailure).toHaveBeenCalledOnce();
     expect(repository.saveProfile).toHaveBeenCalledTimes(2);
