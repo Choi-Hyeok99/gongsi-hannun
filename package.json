@@ -11,6 +11,7 @@
     "sync:disclosures": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-sync.ts",
     "sync:disclosure-documents": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-document-sync.ts",
     "sync:daily-prices": "tsx --env-file=.env.local src/jobs/collector/run-daily-price-sync.ts",
+    "verify:live-data": "tsx --env-file-if-exists=.env.local src/jobs/collector/verify-live-data-readiness.ts",
     "materialize:events": "tsx --env-file=.env.local src/jobs/collector/run-event-materialization.ts",
     "generate:disclosure-alerts": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-alert-generation.ts",
     "analyze:disclosures": "tsx --env-file=.env.local src/jobs/analyzer/run-ai-disclosure-summary.ts",
