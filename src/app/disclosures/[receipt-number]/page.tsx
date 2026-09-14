@@ -55,7 +55,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
     listCompanyDisclosures(repository, disclosure.company.stockCode, 30),
     listDisclosureDocuments(documentRepository, disclosure.receiptNumber),
     getDisclosureDocumentCollectionStatus(documentRepository, disclosure.receiptNumber),
-    findAiDisclosureSummaryState(disclosure.receiptNumber).catch(() => ({ status: "FAILED", summary: null } as const)),
+    findAiDisclosureSummaryState(disclosure.receiptNumber).catch(() => ({ status: "FAILED", summary: null, updatedAt: null } as const)),
   ]);
   const correctionTimeline = findCorrectionTimeline(disclosure, companyDisclosures);
 
@@ -64,7 +64,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
       <SiteHeader />
       <main className="content-container page-content">
         <div className="breadcrumb">
-          <Link href="/">홈</Link><span>/</span><Link href="/disclosures">오늘의 주요 공시</Link><span>/</span><span>상세</span>
+          <Link href="/">홈</Link><span>/</span><Link href="/disclosures">최근 주요 공시</Link><span>/</span><span>상세</span>
         </div>
         <article className="disclosure-detail">
           <div className="disclosure-detail__heading">

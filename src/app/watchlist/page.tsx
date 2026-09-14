@@ -58,7 +58,7 @@ export default async function WatchlistPage({ searchParams }: Props) {
             <div className="empty-state">
               <strong>아직 저장한 관심기업이 없습니다.</strong>
               <p>기업 상세 화면에서 관심기업을 저장해 보세요.</p>
-              <Link className="primary-link" href="/search?query=삼성">기업 찾아보기</Link>
+              <Link className="primary-link" href="/search">기업 찾아보기</Link>
             </div>
           )}
         </section>

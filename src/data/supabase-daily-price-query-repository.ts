@@ -6,6 +6,9 @@ import { readServerEnvironment } from "@/server/env";
 
 type DailyPriceRow = Readonly<{
   trading_date: string;
+  open_price: string | number | null;
+  high_price: string | number | null;
+  low_price: string | number | null;
   close_price: string | number | null;
   volume: string | number | null;
 }>;
@@ -21,7 +24,7 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
   async findRecentByStockCode(stockCode: string, limit: number): Promise<readonly DailyPricePoint[]> {
     const { data, error } = await this.client
       .from("daily_prices")
-      .select("trading_date,close_price,volume,companies!inner(stock_code)")
+      .select("trading_date,open_price,high_price,low_price,close_price,volume,companies!inner(stock_code)")
       .eq("source", DAILY_PRICE_SOURCE_ID)
       .eq("companies.stock_code", stockCode)
       .order("trading_date", { ascending: false })
@@ -40,7 +43,7 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
     if (stockCodes.length === 0) return {};
     const { data, error } = await this.client
       .from("daily_prices")
-      .select("trading_date,close_price,volume,source,companies!inner(stock_code)")
+      .select("trading_date,open_price,high_price,low_price,close_price,volume,source,companies!inner(stock_code)")
       .eq("source", DAILY_PRICE_SOURCE_ID)
       .in("companies.stock_code", [...stockCodes])
       .order("trading_date", { ascending: false })
@@ -64,6 +67,9 @@ function mapDailyPricePoint(row: DailyPriceRow): DailyPricePoint | null {
   if (closePrice === null) return null;
   return {
     tradingDate: row.trading_date,
+    openPrice: parseNumericValue(row.open_price) ?? undefined,
+    highPrice: parseNumericValue(row.high_price) ?? undefined,
+    lowPrice: parseNumericValue(row.low_price) ?? undefined,
     closePrice,
     volume: parseNumericValue(row.volume),
     sourceId: DAILY_PRICE_SOURCE_ID,

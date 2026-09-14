@@ -48,6 +48,9 @@ export type DailyPriceStatus = "READY" | "NO_DATA" | "INSUFFICIENT_HISTORY" | "S
 
 export type DailyPricePoint = Readonly<{
   tradingDate: string;
+  openPrice?: number;
+  highPrice?: number;
+  lowPrice?: number;
   closePrice: number;
   volume: number | null;
   sourceId: string;

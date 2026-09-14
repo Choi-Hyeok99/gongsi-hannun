@@ -2,8 +2,10 @@ name: Daily market data collection
 
 on:
   schedule:
-    # 09:30 UTC is 18:30 KST. GitHub Actions schedules always use UTC.
-    - cron: "30 9 * * 1-5"
+    # GitHub Actions schedules use UTC. Run after KRX's 16:00 preliminary and
+    # 18:10 final end-of-day transmissions so the same trading day is visible.
+    - cron: "10 7 * * 1-5"
+    - cron: "20 9 * * 1-5"
   workflow_dispatch:
     inputs:
       collection_date:
@@ -62,10 +64,14 @@ jobs:
           const previous = new Date(`${collectionDate}T00:00:00.000Z`);
           previous.setUTCDate(previous.getUTCDate() - 1);
           const previousDate = previous.toISOString().slice(0, 10);
+          const priceLookback = new Date(`${collectionDate}T00:00:00.000Z`);
+          priceLookback.setUTCDate(priceLookback.getUTCDate() - 7);
+          const priceFrom = priceLookback.toISOString().slice(0, 10);
           const output = process.env.GITHUB_OUTPUT;
           require("node:fs").appendFileSync(output, [
             `collection_date=${collectionDate}`,
             `previous_date=${previousDate}`,
+            `price_from=${priceFrom}`,
             `dart_from=${previousDate.replaceAll("-", "")}`,
             `dart_to=${collectionDate.replaceAll("-", "")}`,
             "",
@@ -97,7 +103,7 @@ jobs:
       - name: Collect KRX daily prices
         run: >-
           npx tsx src/jobs/collector/run-daily-price-sync.ts
-          --from "${{ steps.dates.outputs.collection_date }}"
+          --from "${{ steps.dates.outputs.price_from }}"
           --to "${{ steps.dates.outputs.collection_date }}"
 
       - name: Generate AI disclosure summaries

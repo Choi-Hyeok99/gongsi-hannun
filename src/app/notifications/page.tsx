@@ -70,7 +70,7 @@ export default async function NotificationsPage() {
             <div className="empty-state">
               <strong>아직 도착한 중요 공시 알림이 없습니다.</strong>
               <p>관심기업을 저장하면 중요 공시를 자동으로 골라 이곳에 알려드립니다.</p>
-              <Link className="primary-link" href="/search?query=삼성">관심기업 찾기</Link>
+              <Link className="primary-link" href="/search">관심기업 찾기</Link>
             </div>
           )}
         </section>

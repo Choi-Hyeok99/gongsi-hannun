@@ -1,18 +1,29 @@
 import Link from "next/link";
+import React from "react";
 import type { DisclosureSummary } from "@/domain/disclosure-query";
 import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
 
 type Props = Readonly<{
   disclosures: readonly DisclosureSummary[];
-  emptyMessage?: string;
+  emptyState?: Readonly<{
+    title: string;
+    description: string;
+    action?: Readonly<{ href: string; label: string }>;
+  }>;
 }>;
 
-export function DisclosureList({ disclosures, emptyMessage = "표시할 공시가 없습니다." }: Props) {
+const DEFAULT_EMPTY_STATE = {
+  title: "현재 표시할 공개 공시가 없습니다.",
+  description: "수집이 완료된 공개 공시가 생기면 이 목록에 표시됩니다.",
+} as const;
+
+export function DisclosureList({ disclosures, emptyState = DEFAULT_EMPTY_STATE }: Props) {
   if (disclosures.length === 0) {
     return (
       <div className="empty-state">
-        <strong>{emptyMessage}</strong>
-        <p>새 공시가 수집되면 이곳에 바로 표시됩니다.</p>
+        <strong>{emptyState.title}</strong>
+        <p>{emptyState.description}</p>
+        {emptyState.action ? <Link className="primary-link" href={emptyState.action.href}>{emptyState.action.label}</Link> : null}
       </div>
     );
   }

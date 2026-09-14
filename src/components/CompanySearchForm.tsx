@@ -16,7 +16,7 @@ export function CompanySearchForm({ initialQuery = "", category, autoFocus = fal
         id="company-query"
         maxLength={60}
         name="query"
-        placeholder="예: 삼성전자 또는 005930"
+        placeholder="기업명 또는 6자리 종목코드"
         type="search"
       />
       <button type="submit">검색</button>

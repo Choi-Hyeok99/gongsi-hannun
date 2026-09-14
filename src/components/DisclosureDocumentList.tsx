@@ -71,7 +71,8 @@ function getStatusDescription(status?: DisclosureDocumentCollectionStatus): stri
   if (status === "FAILED") return "다음 자동 수집 때 다시 시도합니다. 지금은 아래 OpenDART 원문을 확인해 주세요.";
   if (status === "UNAVAILABLE") return "일부 공시는 OpenDART 원본파일 API에서 별도 문서를 제공하지 않습니다.";
   if (status === "READY") return "안전하게 변환할 수 있는 텍스트 문서가 없어 OpenDART 원문으로 연결합니다.";
-  return "준비가 끝나면 이곳에 본문과 첨부문서가 표시됩니다.";
+  if (status === "FETCHING") return "현재 OpenDART 원문 파일을 수집하고 있습니다.";
+  return "아직 저장된 원문 문서가 없습니다. 다음 예약 수집에서 다시 확인합니다.";
 }
 
 function formatBytes(value: number): string {
