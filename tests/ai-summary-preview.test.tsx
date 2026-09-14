@@ -10,6 +10,7 @@ describe("AiDisclosureSummaryPreview", () => {
     disclosedOn: "2026-09-10",
     eventTypeLabel: "정기보고",
     originalUrl: "https://dart.fss.or.kr/example",
+    receiptNumber: "20260910000001",
   };
 
   it.each([
@@ -30,7 +31,7 @@ describe("AiDisclosureSummaryPreview", () => {
   });
 
   it("shows a stored successful AI summary without a deep-report preview", () => {
-    const summary = { plainSummary: "실제 핵심 요약입니다.", whyItMatters: "실제 중요 이유입니다.", checkpoints: ["수치 확인"], cautions: ["원문 확인"], importanceScore: 80, generatedAt: "2026-09-11T00:00:00Z" };
+    const summary = { plainSummary: "실제 핵심 요약입니다.", whyItMatters: "실제 중요 이유입니다.", checkpoints: ["수치 확인"], cautions: ["원문 확인"], importanceScore: 80, generatedAt: "2026-09-11T00:00:00Z", verifiedFacts: [] };
     const markup = renderToStaticMarkup(
       <AiDisclosureSummaryPreview
         {...baseProps}

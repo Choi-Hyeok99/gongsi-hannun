@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState } from "react";
 import type { AiDisclosureSummary, AiDisclosureSummaryState } from "@/domain/ai-disclosure-summary";
+import type { DisclosureFactKind, VerifiedDisclosureFact } from "@/domain/ai-disclosure-facts";
 
 type Props = Readonly<{
   companyName: string;
@@ -9,6 +11,7 @@ type Props = Readonly<{
   disclosedOn: string;
   eventTypeLabel: string;
   originalUrl: string;
+  receiptNumber: string;
   state: AiDisclosureSummaryState;
 }>;
 
@@ -25,6 +28,7 @@ export function AiDisclosureSummaryPreview(props: Props) {
   if (props.state.status !== "READY") return <AiSummaryStatus {...props} />;
 
   const slides = createSummarySlides(props, props.state.summary);
+  const verifiedFacts = props.state.summary.verifiedFacts.filter((fact) => fact.verificationStatus === "VERIFIED");
   const activeSlide = slides[activeIndex] ?? slides[0];
 
   const move = (direction: -1 | 1) => {
@@ -70,8 +74,44 @@ export function AiDisclosureSummaryPreview(props: Props) {
       <p className="ai-summary-preview__notice">
         AI가 생성한 참고용 요약입니다. 중요한 판단 전 <a href={props.originalUrl} target="_blank" rel="noopener noreferrer">OpenDART 원문</a>을 확인하세요.
       </p>
+      {verifiedFacts.length > 0 ? <VerifiedFacts facts={verifiedFacts} receiptNumber={props.receiptNumber} /> : null}
     </section>
   );
+}
+
+function VerifiedFacts({ facts, receiptNumber }: Readonly<{ facts: readonly VerifiedDisclosureFact[]; receiptNumber: string }>) {
+  return (
+    <section className="deep-report__section" aria-labelledby="verified-facts-heading">
+      <div className="deep-report__section-heading">
+        <span aria-hidden="true">✓</span>
+        <div><p>원문 대조 완료</p><h3 id="verified-facts-heading">공시에서 확인된 핵심 숫자</h3></div>
+      </div>
+      <div className="deep-report__number-table" role="table" aria-label="원문에서 확인된 핵심 숫자">
+        <div className="deep-report__number-row deep-report__number-row--head" role="row">
+          <span role="columnheader">항목</span><span role="columnheader">확인된 값</span><span role="columnheader">원문 근거</span>
+        </div>
+        {facts.map((fact) => (
+          <div className="deep-report__number-row" role="row" key={`${fact.source.documentId}:${fact.source.startOffset}:${fact.value}`}>
+            <strong role="cell">{fact.label}<small>{getFactKindLabel(fact.kind)}</small></strong>
+            <span role="cell">{fact.value} {fact.unit}</span>
+            <span role="cell">
+              <q>{fact.sourceQuote}</q>
+              <Link href={`/disclosures/${receiptNumber}/documents/${fact.source.documentId}`}>
+                {fact.source.documentTitle} · 원문 위치 {fact.source.startOffset.toLocaleString("ko-KR")}–{fact.source.endOffset.toLocaleString("ko-KR")}
+              </Link>
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function getFactKindLabel(kind: DisclosureFactKind): string {
+  if (kind === "AMOUNT") return "금액";
+  if (kind === "PERCENTAGE") return "비율";
+  if (kind === "QUANTITY") return "수량";
+  return "기간";
 }
 
 function AiSummaryStatus(props: Props) {

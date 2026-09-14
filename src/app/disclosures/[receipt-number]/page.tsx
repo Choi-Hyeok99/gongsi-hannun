@@ -85,6 +85,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             disclosedOn={disclosure.disclosedOn}
             eventTypeLabel={getDisclosureEventTypeLabel(disclosure.eventType)}
             originalUrl={disclosure.originalUrl}
+            receiptNumber={disclosure.receiptNumber}
             state={aiSummaryState}
           />
           <DisclosureDocumentList receiptNumber={disclosure.receiptNumber} documents={documents} status={documentStatus} />

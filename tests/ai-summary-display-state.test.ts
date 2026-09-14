@@ -68,6 +68,7 @@ describe("findAiDisclosureSummaryState", () => {
         cautions: ["주의 항목"],
         importanceScore: 82,
         generatedAt: "2026-09-14T00:00:00Z",
+        verifiedFacts: [],
       },
     });
   });

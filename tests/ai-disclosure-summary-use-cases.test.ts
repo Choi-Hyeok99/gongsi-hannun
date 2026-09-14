@@ -5,8 +5,9 @@ import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-ca
 const candidate = {
   eventId: "event-1", receiptNumber: "1", companyName: "기업", reportName: "보고서", disclosedOn: "2026-09-11",
   eventType: "MATERIAL_DISCLOSURE" as const, ruleImportanceScore: 70, contentText: "본문", inputHash: "a".repeat(64),
+  sourceDocument: { id: "document-1", title: "주요 문서", kind: "MAIN" as const, contentHash: "b".repeat(64) },
 };
-const summary = { plainSummary: "충분히 긴 핵심 요약입니다.", whyItMatters: "투자자가 확인할 중요한 이유입니다.", checkpoints: ["핵심 수치 확인"], cautions: ["원문 확인"], importanceScore: 70 };
+const summary = { plainSummary: "충분히 긴 핵심 요약입니다.", whyItMatters: "투자자가 확인할 중요한 이유입니다.", checkpoints: ["핵심 수치 확인"], cautions: ["원문 확인"], importanceScore: 70, factCandidates: [] };
 
 function repository(overrides: Partial<AiAnalysisRepository> = {}): AiAnalysisRepository {
   return {
@@ -20,7 +21,14 @@ describe("analyzePendingDisclosures", () => {
     const repo = repository();
     const provider: AiDisclosureSummaryProvider = { providerName: "google", modelName: "gemini-2.5-flash-lite", summarize: vi.fn(async () => summary) };
     await expect(analyzePendingDisclosures(repo, provider, { limit: 1, analysisVersion: "v1" })).resolves.toEqual({ readCount: 1, succeededCount: 1, skippedCount: 0, failedCount: 0 });
-    expect(repo.complete).toHaveBeenCalledWith("event-1", "v1", provider, summary);
+    expect(repo.complete).toHaveBeenCalledWith("event-1", "v1", provider, {
+      plainSummary: summary.plainSummary,
+      whyItMatters: summary.whyItMatters,
+      checkpoints: summary.checkpoints,
+      cautions: summary.cautions,
+      importanceScore: summary.importanceScore,
+      verifiedFacts: [],
+    });
   });
 
   it("stores only a safe error code when the provider fails", async () => {

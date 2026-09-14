@@ -6,6 +6,7 @@ import type {
   AiDisclosureSummaryState,
 } from "@/domain/ai-disclosure-summary";
 import { DataAccessError } from "@/domain/errors";
+import { readVerifiedDisclosureFacts } from "@/domain/ai-disclosure-facts";
 import { readServerEnvironment } from "@/server/env";
 import { createSupabaseAiAnalysisRepository } from "./supabase-ai-analysis-repository";
 
@@ -25,6 +26,7 @@ type AiAnalysisRow = Readonly<{
   cautions: unknown;
   ai_importance_score: unknown;
   generated_at: unknown;
+  extracted_facts: unknown;
 }>;
 
 export async function findAiDisclosureSummaryState(receiptNumber: string): Promise<AiDisclosureSummaryState> {
@@ -34,7 +36,7 @@ export async function findAiDisclosureSummaryState(receiptNumber: string): Promi
   });
   const { data, error } = await client
     .from("ai_analyses")
-    .select("status,plain_summary,why_it_matters,checkpoints,cautions,ai_importance_score,generated_at,updated_at,events!inner(source_disclosures!inner(receipt_no))")
+    .select("status,plain_summary,why_it_matters,checkpoints,cautions,extracted_facts,ai_importance_score,generated_at,updated_at,events!inner(source_disclosures!inner(receipt_no))")
     .eq("events.source_disclosures.receipt_no", receiptNumber)
     .order("updated_at", { ascending: false })
     .limit(20);
@@ -63,6 +65,7 @@ function toPublishedSummary(row: AiAnalysisRow): AiDisclosureSummary {
     cautions: stringArray(row.cautions),
     importanceScore: Number(row.ai_importance_score ?? 0),
     generatedAt: row.generated_at,
+    verifiedFacts: readVerifiedDisclosureFacts(row.extracted_facts),
   };
 }
 
