@@ -8,6 +8,7 @@ import type {
   GeneratedAiDisclosureSummary,
 } from "@/domain/ai-disclosure-summary";
 import { isDisclosureEventType } from "@/domain/disclosure-classification";
+import { readVerifiedDisclosureFacts } from "@/domain/ai-disclosure-facts";
 import { DataAccessError } from "@/domain/errors";
 
 type RepositoryOptions = Readonly<{
@@ -23,7 +24,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   async findCandidates(limit: number, analysisVersion: string): Promise<readonly AiAnalysisCandidate[]> {
     const { data, error } = await this.client
       .from("events")
-      .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,document_kind,sequence_no,content_text,content_hash))")
+      .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,title,document_kind,sequence_no,content_text,content_hash))")
       .eq("visibility", "PUBLIC")
       .order("occurred_on", { ascending: false })
       .limit(Math.max(limit * 4, limit));
@@ -63,6 +64,12 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
         ruleImportanceScore: Number(row.rule_importance_score),
         contentText,
         inputHash: createHash("sha256").update(`${analysisVersion}:${receiptNumber}:${reportName}:${contentHash}:${contentText.length}`).digest("hex"),
+        sourceDocument: {
+          id: String(mainDocument.id),
+          title: String(mainDocument.title),
+          kind: mainDocument.document_kind === "ATTACHMENT" ? "ATTACHMENT" : "MAIN",
+          contentHash,
+        },
       });
       if (candidates.length >= limit) break;
     }
@@ -113,6 +120,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       why_it_matters: summary.whyItMatters,
       checkpoints: summary.checkpoints,
       cautions: summary.cautions,
+      extracted_facts: summary.verifiedFacts,
       ai_importance_score: summary.importanceScore,
       generated_at: new Date().toISOString(),
       locked_at: null,
@@ -135,7 +143,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   async findPublishedByReceiptNumber(receiptNumber: string): Promise<AiDisclosureSummary | null> {
     const { data, error } = await this.client
       .from("ai_analyses")
-      .select("plain_summary,why_it_matters,checkpoints,cautions,ai_importance_score,generated_at,events!inner(source_disclosures!inner(receipt_no))")
+      .select("plain_summary,why_it_matters,checkpoints,cautions,extracted_facts,ai_importance_score,generated_at,events!inner(source_disclosures!inner(receipt_no))")
       .eq("status", "SUCCEEDED")
       .eq("events.source_disclosures.receipt_no", receiptNumber)
       .order("generated_at", { ascending: false })
@@ -150,6 +158,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       cautions: stringArray(data.cautions),
       importanceScore: Number(data.ai_importance_score ?? 0),
       generatedAt: String(data.generated_at),
+      verifiedFacts: readVerifiedDisclosureFacts(data.extracted_facts),
     };
   }
 

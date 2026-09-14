@@ -43,6 +43,8 @@ export interface DailyPriceTargetRepository {
 
 export const DAILY_PRICE_PERIODS = ["1M", "3M", "1Y"] as const;
 export type DailyPricePeriod = (typeof DAILY_PRICE_PERIODS)[number];
+export const DAILY_PRICE_SOURCE_ID = "KRX_DAILY";
+export type DailyPriceStatus = "READY" | "NO_DATA" | "INSUFFICIENT_HISTORY" | "STALE" | "ERROR";
 
 export type DailyPricePoint = Readonly<{
   tradingDate: string;
@@ -50,14 +52,16 @@ export type DailyPricePoint = Readonly<{
   highPrice?: number;
   lowPrice?: number;
   closePrice: number;
-  volume: number;
+  volume: number | null;
   sourceId: string;
 }>;
 
 export type DailyPriceSnapshot = Readonly<{
+  status: DailyPriceStatus;
   period: DailyPricePeriod;
   points: readonly DailyPricePoint[];
   latest: DailyPricePoint | null;
+  previous: DailyPricePoint | null;
   sourceId: string | null;
   changeAmount: number | null;
   changeRate: number | null;

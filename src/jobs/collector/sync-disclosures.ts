@@ -13,6 +13,7 @@ const MAX_PAGES_PER_CLASS = 100;
 type Dependencies = Readonly<{
   source: DisclosureSource;
   repository: DisclosureSyncRepository;
+  now?: () => Date;
 }>;
 
 export async function syncDisclosures(
@@ -50,7 +51,8 @@ export async function syncDisclosures(
       }
     }
 
-    const counts = await dependencies.repository.upsertDisclosures([...records.values()]);
+    const collectedAt = (dependencies.now ?? (() => new Date()))().toISOString();
+    const counts = await dependencies.repository.upsertDisclosures(runId, collectedAt, [...records.values()]);
     await dependencies.repository.completeRun(runId, counts);
     return counts;
   } catch (error) {
