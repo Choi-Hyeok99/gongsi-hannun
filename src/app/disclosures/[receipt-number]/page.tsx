@@ -55,7 +55,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
     listCompanyDisclosures(repository, disclosure.company.stockCode, 30),
     listDisclosureDocuments(documentRepository, disclosure.receiptNumber),
     getDisclosureDocumentCollectionStatus(documentRepository, disclosure.receiptNumber),
-    findAiDisclosureSummaryState(disclosure.receiptNumber).catch(() => ({ status: "FAILED", summary: null } as const)),
+    findAiDisclosureSummaryState(disclosure.receiptNumber).catch(() => ({ status: "FAILED", summary: null, updatedAt: null } as const)),
   ]);
   const correctionTimeline = findCorrectionTimeline(disclosure, companyDisclosures);
 

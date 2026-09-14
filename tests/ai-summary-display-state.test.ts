@@ -36,16 +36,16 @@ describe("findAiDisclosureSummaryState", () => {
       .resolves.toEqual({ status: "NOT_GENERATED", summary: null });
   });
 
-  it.each(["PENDING", "PROCESSING"])("maps %s to the pending display state", async (status) => {
-    database.data = [{ status }];
+  it.each(["PENDING", "PROCESSING"] as const)("preserves the factual %s display state and timestamp", async (status) => {
+    database.data = [{ status, updated_at: "2026-09-14T03:20:00Z" }];
     await expect(findAiDisclosureSummaryState("202609140001"))
-      .resolves.toEqual({ status: "PENDING", summary: null });
+      .resolves.toEqual({ status, summary: null, updatedAt: "2026-09-14T03:20:00Z" });
   });
 
   it("returns the failed display state when generation failed", async () => {
-    database.data = [{ status: "FAILED" }];
+    database.data = [{ status: "FAILED", updated_at: "2026-09-14T04:20:00Z" }];
     await expect(findAiDisclosureSummaryState("202609140001"))
-      .resolves.toEqual({ status: "FAILED", summary: null });
+      .resolves.toEqual({ status: "FAILED", summary: null, updatedAt: "2026-09-14T04:20:00Z" });
   });
 
   it("returns only stored fields from a successful analysis", async () => {
