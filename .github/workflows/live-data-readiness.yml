@@ -1,0 +1,39 @@
+name: Verify live data readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      require_data:
+        description: "Fail when companies, disclosures, or daily prices are still empty"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
+      KRX_API_KEY: ${{ secrets.KRX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Verify schema, credentials, API approvals, and stored data
+        env:
+          REQUIRE_DATA: ${{ inputs.require_data }}
+        run: |
+          if [ "$REQUIRE_DATA" = "true" ]; then
+            npx tsx src/jobs/collector/verify-live-data-readiness.ts --require-data
+          else
+            npx tsx src/jobs/collector/verify-live-data-readiness.ts
+          fi
