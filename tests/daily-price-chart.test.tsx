@@ -7,10 +7,10 @@ import type { DailyPriceSnapshot } from "@/domain/daily-price";
 const krxSnapshot: DailyPriceSnapshot = {
   period: "1M",
   points: [
-    { tradingDate: "2026-09-09", closePrice: 72_500, volume: 90, sourceId: "KRX_DAILY" },
-    { tradingDate: "2026-09-10", closePrice: 74_000, volume: 100, sourceId: "KRX_DAILY" },
+    { tradingDate: "2026-09-09", openPrice: 72_000, highPrice: 73_000, lowPrice: 71_500, closePrice: 72_500, volume: 90, sourceId: "KRX_DAILY" },
+    { tradingDate: "2026-09-10", openPrice: 72_800, highPrice: 74_500, lowPrice: 72_600, closePrice: 74_000, volume: 100, sourceId: "KRX_DAILY" },
   ],
-  latest: { tradingDate: "2026-09-10", closePrice: 74_000, volume: 100, sourceId: "KRX_DAILY" },
+  latest: { tradingDate: "2026-09-10", openPrice: 72_800, highPrice: 74_500, lowPrice: 72_600, closePrice: 74_000, volume: 100, sourceId: "KRX_DAILY" },
   sourceId: "KRX_DAILY",
   changeAmount: 1_500,
   changeRate: 2.069,
@@ -26,6 +26,20 @@ describe("DailyPriceChart source disclosure", () => {
     const markup = renderToStaticMarkup(<DailyPriceChart companyName="삼성전자" snapshot={krxSnapshot} compact />);
     expect(markup).toContain("최근 1개월 일별 종가 · KRX");
     expect(markup).toContain("▲");
+  });
+
+  it("shows detailed OHLC, volume, scale, and period statistics", () => {
+    const markup = renderToStaticMarkup(<DailyPriceChart companyName="삼성전자" snapshot={krxSnapshot} />);
+    expect(markup).toContain("기간 고가");
+    expect(markup).toContain("기간 저가");
+    expect(markup).toContain("선택일");
+    expect(markup).toContain("시가");
+    expect(markup).toContain("고가");
+    expect(markup).toContain("저가");
+    expect(markup).toContain("종가");
+    expect(markup).toContain("거래량");
+    expect(markup).toContain("price-chart__crosshair");
+    expect(markup).toContain("price-chart__volume");
   });
 
   it("does not claim a source in the empty state", () => {

@@ -46,6 +46,9 @@ export type DailyPricePeriod = (typeof DAILY_PRICE_PERIODS)[number];
 
 export type DailyPricePoint = Readonly<{
   tradingDate: string;
+  openPrice?: number;
+  highPrice?: number;
+  lowPrice?: number;
   closePrice: number;
   volume: number;
   sourceId: string;

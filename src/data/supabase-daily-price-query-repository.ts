@@ -6,6 +6,9 @@ import { readServerEnvironment } from "@/server/env";
 
 type DailyPriceRow = Readonly<{
   trading_date: string;
+  open_price: string | number;
+  high_price: string | number;
+  low_price: string | number;
   close_price: string | number;
   volume: string | number;
 }>;
@@ -34,7 +37,7 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
 
     const { data, error } = await this.client
       .from("daily_prices")
-      .select("trading_date,close_price,volume,companies!inner(stock_code)")
+      .select("trading_date,open_price,high_price,low_price,close_price,volume,companies!inner(stock_code)")
       .eq("source", sourceId)
       .eq("companies.stock_code", stockCode)
       .order("trading_date", { ascending: false })
@@ -42,6 +45,9 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
     if (error) throw new DataAccessError("일별 주가를 조회하지 못했습니다.");
     return ((data ?? []) as unknown as DailyPriceRow[]).map((row) => ({
       tradingDate: row.trading_date,
+      openPrice: Number(row.open_price),
+      highPrice: Number(row.high_price),
+      lowPrice: Number(row.low_price),
       closePrice: Number(row.close_price),
       volume: Number(row.volume),
       sourceId,
@@ -55,7 +61,7 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
     if (stockCodes.length === 0) return {};
     const { data, error } = await this.client
       .from("daily_prices")
-      .select("trading_date,close_price,volume,source,companies!inner(stock_code)")
+      .select("trading_date,open_price,high_price,low_price,close_price,volume,source,companies!inner(stock_code)")
       .eq("source", OFFICIAL_DAILY_SOURCE)
       .in("companies.stock_code", [...stockCodes])
       .order("trading_date", { ascending: false })
@@ -69,6 +75,9 @@ export class SupabaseDailyPriceQueryRepository implements DailyPriceQueryReposit
       if (!stockCode || !grouped[stockCode] || grouped[stockCode].length >= limitPerStock) continue;
       grouped[stockCode].push({
         tradingDate: row.trading_date,
+        openPrice: Number(row.open_price),
+        highPrice: Number(row.high_price),
+        lowPrice: Number(row.low_price),
         closePrice: Number(row.close_price),
         volume: Number(row.volume),
         sourceId: row.source,
