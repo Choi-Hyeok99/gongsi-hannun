@@ -6,7 +6,7 @@ import React from "react";
 
 const primaryLinks = [
   { href: "/search", label: "기업", matches: (pathname: string) => pathname === "/search" || pathname.startsWith("/companies/") },
-  { href: "/disclosures", label: "오늘의 주요 공시", matches: (pathname: string) => pathname === "/disclosures" || pathname.startsWith("/disclosures/") },
+  { href: "/disclosures", label: "최근 주요 공시", matches: (pathname: string) => pathname === "/disclosures" || pathname.startsWith("/disclosures/") },
   { href: "/calendar", label: "공시 달력", matches: (pathname: string) => pathname === "/calendar" },
 ] as const;
 

@@ -103,9 +103,9 @@ export default async function CompanyPage({ params, searchParams }: Props) {
           </section>
 
           <aside className="info-card info-card--accent">
-            <p className="eyebrow">데이터 상태</p>
-            <h2>{company.sector ? "OpenDART 기업정보 수집 완료" : "OpenDART 기본 기업정보 수집 완료"}</h2>
-            <p>{company.sector ? "공식 데이터의 세부 업종을 표준 카테고리로 정리해 표시합니다." : "OpenDART 원천값에 세부 업종이 없어 해당 항목은 표시하지 않습니다."}</p>
+            <p className="eyebrow">데이터 출처</p>
+            <h2>{company.sector ? "OpenDART 기업·업종 정보" : "OpenDART 기업 기본 정보"}</h2>
+            <p>{company.sector ? "조회된 세부 업종을 서비스 표준 카테고리와 함께 표시합니다." : "조회된 원천 데이터에 세부 업종 값이 없어 기본 정보만 표시합니다."}</p>
           </aside>
         </div>
 
@@ -139,7 +139,11 @@ export default async function CompanyPage({ params, searchParams }: Props) {
             </div>
             <Link className="text-link" href="/disclosures">전체 공시 보기</Link>
           </div>
-          <DisclosureList disclosures={disclosures} emptyMessage="최근 수집된 기업 공시가 없습니다." />
+          <DisclosureList disclosures={disclosures} emptyState={{
+            title: "현재 저장된 공개 공시가 없습니다.",
+            description: `${company.name}에 연결된 공개 공시가 현재 데이터베이스에 없습니다.`,
+            action: { href: "/disclosures", label: "전체 공시 보기" },
+          }} />
         </section>
       </main>
       <SiteFooter />

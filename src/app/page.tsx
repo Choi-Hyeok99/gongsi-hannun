@@ -9,33 +9,46 @@ import { createDisclosureRepository } from "@/data/supabase-disclosure-repositor
 import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDailyPriceQueryRepository } from "@/data/supabase-daily-price-query-repository";
 import { createHomeStatusRepository } from "@/data/supabase-home-status-repository";
-import { getCompany } from "@/server/company-use-cases";
+import type { DailyPriceSnapshot } from "@/domain/daily-price";
+import { browseCompaniesPage } from "@/server/company-use-cases";
 import { getDailyPriceSnapshotsOrEmpty } from "@/server/daily-price-use-cases";
 import { listLatestDisclosures } from "@/server/disclosure-use-cases";
 import { getHomeOperationalStatus } from "@/server/home-status-use-cases";
 
 export const dynamic = "force-dynamic";
 
-const featuredCompanies = [
-  { name: "삼성전자", stockCode: "005930" },
-  { name: "SK하이닉스", stockCode: "000660" },
-  { name: "NAVER", stockCode: "035420" },
-  { name: "현대차", stockCode: "005380" },
-  { name: "LG화학", stockCode: "051910" },
-  { name: "삼성바이오로직스", stockCode: "207940" },
-  { name: "KB금융", stockCode: "105560" },
-  { name: "한화에어로스페이스", stockCode: "012450" },
-] as const;
+const PRICE_UNAVAILABLE: DailyPriceSnapshot = {
+  status: "ERROR",
+  period: "1M",
+  points: [],
+  latest: null,
+  previous: null,
+  sourceId: null,
+  changeAmount: null,
+  changeRate: null,
+};
 
 export default async function HomePage() {
-  const dailyPriceRepository = createDailyPriceQueryRepository();
-  const companyRepository = createCompanyRepository();
-  const [latestDisclosures, featuredPrices, featuredCompanyDetails, operationalStatus] = await Promise.all([
-    listLatestDisclosures(createDisclosureRepository(), 8),
-    getDailyPriceSnapshotsOrEmpty(dailyPriceRepository, featuredCompanies.map((company) => company.stockCode), "1M"),
-    Promise.all(featuredCompanies.map((company) => getCompany(companyRepository, company.stockCode))),
+  const [disclosureResult, companyResult, operationalStatus] = await Promise.all([
+    Promise.resolve()
+      .then(() => listLatestDisclosures(createDisclosureRepository(), 8))
+      .then((items) => ({ items, failed: false as const }))
+      .catch(() => ({ items: [], failed: true as const })),
+    Promise.resolve()
+      .then(() => browseCompaniesPage(createCompanyRepository(), "", "", "1", 8))
+      .then((result) => ({ companies: result.companies, failed: false as const }))
+      .catch(() => ({ companies: [], failed: true as const })),
     getHomeOperationalStatus(createHomeStatusRepository),
   ]);
+  const featuredPrices: Record<string, DailyPriceSnapshot> = companyResult.companies.length > 0
+    ? await Promise.resolve()
+        .then(() => getDailyPriceSnapshotsOrEmpty(
+          createDailyPriceQueryRepository(),
+          companyResult.companies.map((company) => company.stockCode),
+          "1M",
+        ))
+        .catch(() => ({}))
+    : {};
 
   return (
     <div className="site-shell">
@@ -56,42 +69,55 @@ export default async function HomePage() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">빠른 탐색</p>
-              <h2 id="featured-heading">주요 기업</h2>
+              <h2 id="featured-heading">상장기업 둘러보기</h2>
             </div>
             <Link className="text-link" href="/search">
               더 많은 기업 보기
             </Link>
           </div>
-          <div className="featured-grid">
-            {featuredCompanies.map((company, index) => (
+          {companyResult.companies.length > 0 ? <div className="featured-grid">
+            {companyResult.companies.map((company) => (
               <Link className="featured-card" href={`/companies/${company.stockCode}`} key={company.stockCode}>
                 <span className="featured-card__heading">
                   <span className="company-avatar" aria-hidden="true">{company.name.slice(0, 1)}</span>
                   <span className="featured-card__identity">
                     <strong>{company.name}</strong>
                     <small>{company.stockCode}</small>
-                    <span className={featuredCompanyDetails[index]?.industryCategory === "UNCLASSIFIED" ? "industry-badge industry-badge--muted" : "industry-badge"}>
-                      {featuredCompanyDetails[index]?.industryCategoryLabel ?? "미분류"}
+                    <span className={company.industryCategory === "UNCLASSIFIED" ? "industry-badge industry-badge--muted" : "industry-badge"}>
+                      {company.industryCategoryLabel ?? "업종 미분류"}
                     </span>
                   </span>
                   <span className="card-arrow" aria-hidden="true">→</span>
                 </span>
-                <DailyPriceChart companyName={company.name} snapshot={featuredPrices[company.stockCode]!} compact />
+                <DailyPriceChart companyName={company.name} snapshot={featuredPrices[company.stockCode] ?? PRICE_UNAVAILABLE} compact />
               </Link>
             ))}
-          </div>
+          </div> : (
+            <div className="empty-state">
+              <strong>{companyResult.failed ? "상장기업 목록을 불러오지 못했습니다." : "표시할 활성 상장기업이 없습니다."}</strong>
+              <p>{companyResult.failed ? "연결 상태를 확인한 뒤 기업 검색에서 다시 시도해 주세요." : "현재 데이터베이스에 활성 상태로 분류된 상장기업이 없습니다."}</p>
+              <Link className="primary-link" href="/search">기업 검색으로 이동</Link>
+            </div>
+          )}
         </section>
 
         <section className="content-container section" aria-labelledby="home-disclosures-heading">
           <div className="section-heading">
             <div>
               <p className="eyebrow">평일 10분 간격 수집</p>
-              <h2 id="home-disclosures-heading">오늘의 주요 공시</h2>
+              <h2 id="home-disclosures-heading">최근 주요 공시</h2>
             </div>
             <Link className="text-link" href="/disclosures">전체 공시 보기</Link>
           </div>
           <HomeDisclosureCollectionStatus status={operationalStatus} />
-          <DisclosureList disclosures={latestDisclosures} />
+          <DisclosureList
+            disclosures={disclosureResult.items}
+            emptyState={disclosureResult.failed ? {
+              title: "최신 공시를 불러오지 못했습니다.",
+              description: "데이터 연결 상태를 확인한 뒤 전체 공시 화면에서 다시 시도해 주세요.",
+              action: { href: "/disclosures", label: "전체 공시에서 다시 보기" },
+            } : undefined}
+          />
         </section>
 
         <section className="content-container section">
@@ -100,7 +126,7 @@ export default async function HomePage() {
               <p className="eyebrow">데이터 안내</p>
               <HomeCompanyCount count={operationalStatus.activeCompanyCount} />
             </div>
-            <p>OpenDART에서 수집한 최신 공시는 기업별 타임라인에서 확인할 수 있습니다.</p>
+            <p>OpenDART 공시와 KRX 일별 종가는 각 데이터에 표시된 기준일과 최근 성공 수집 시각을 기준으로 확인할 수 있습니다.</p>
           </div>
         </section>
       </main>

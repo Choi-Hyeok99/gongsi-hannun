@@ -12,7 +12,10 @@ vi.mock("next/navigation", () => ({ usePathname: () => navigationState.pathname 
 vi.mock("@/components/SiteHeader", () => ({ SiteHeader: () => <header>공시한눈</header> }));
 vi.mock("@/components/SiteFooter", () => ({ SiteFooter: () => <footer /> }));
 vi.mock("@/data/supabase-disclosure-repository", () => ({ createDisclosureRepository: () => ({}) }));
-vi.mock("@/server/disclosure-use-cases", () => ({ listDisclosureCalendar }));
+vi.mock("@/server/disclosure-use-cases", () => ({
+  listDisclosureCalendar,
+  resolveDisclosureCalendarMonth: (month: string | null) => month && /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? month : "2026-09",
+}));
 
 import CalendarPage from "@/app/calendar/page";
 import { PrimaryNavigation } from "@/components/PrimaryNavigation";
@@ -40,7 +43,7 @@ describe("mobile primary navigation", () => {
     const markup = renderToStaticMarkup(<PrimaryNavigation />);
 
     expect(markup).toContain("기업");
-    expect(markup).toContain("오늘의 주요 공시");
+    expect(markup).toContain("최근 주요 공시");
     expect(markup).toContain("공시 달력");
     expect(markup.match(/aria-current="page"/g)).toHaveLength(1);
     expect(markup).toMatch(new RegExp(`aria-current="page" href="${currentHref}"|href="${currentHref}" aria-current="page"`));
@@ -72,6 +75,15 @@ describe("mobile disclosure calendar", () => {
   it("falls back to the first disclosure day when the requested date is invalid", () => {
     expect(resolveSelectedCalendarDay("40", 30, new Map([[9, [sample]]]).keys())).toBe(9);
     expect(resolveSelectedCalendarDay(undefined, 30, new Map().keys())).toBe(1);
+  });
+
+  it("renders a factual recovery notice when the calendar query fails", async () => {
+    listDisclosureCalendar.mockRejectedValueOnce(new Error("offline"));
+
+    const markup = renderToStaticMarkup(await CalendarPage({ searchParams: Promise.resolve({ month: "2026-09" }) }));
+
+    expect(markup).toContain("공시 일정을 불러오지 못했습니다.");
+    expect(markup).not.toContain("Application error");
   });
 });
 

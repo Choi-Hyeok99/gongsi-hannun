@@ -162,7 +162,7 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .empty-state strong { font-size: 18px; }
 .empty-state p { margin: 8px auto 0; color: var(--muted); }
 .empty-state--page { max-width: 640px; margin: 72px auto; }
-.empty-state--page .primary-link { margin-top: 22px; }
+.empty-state .primary-link { margin-top: 22px; }
 
 .company-hero { display: flex; align-items: center; gap: 22px; padding: 28px 0 38px; }
 .company-hero h1 { font-size: clamp(32px, 5vw, 46px); }
@@ -615,10 +615,14 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   .search-form input { padding-inline: 10px; }
   .search-form button { padding-inline: 17px; }
   .section { padding-block: 40px; }
+  .section-heading, .result-heading { align-items: flex-start; gap: 10px; }
+  .section-heading .text-link { flex: 0 0 auto; padding-top: 4px; }
+  .result-heading span { flex: 0 0 auto; }
   .home-collection-status { align-items: flex-start; flex-direction: column; }
   .home-collection-status small { text-align: left; }
   .featured-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
   .featured-card { padding: 12px; }
+  .featured-card__identity { max-width: calc(100% - 45px); }
   .featured-card .company-avatar { width: 36px; height: 36px; }
   .featured-card .card-arrow { display: none; }
   .featured-card .price-chart__svg { height: 52px; }

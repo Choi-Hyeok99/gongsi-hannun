@@ -61,7 +61,7 @@ export default async function DisclosureDocumentPage({ params }: Props) {
       <SiteHeader />
       <main className="content-container page-content">
         <div className="breadcrumb">
-          <Link href="/">홈</Link><span>/</span><Link href="/disclosures">오늘의 주요 공시</Link><span>/</span><Link href={disclosureUrl}>상세</Link><span>/</span><span>문서</span>
+          <Link href="/">홈</Link><span>/</span><Link href="/disclosures">최근 주요 공시</Link><span>/</span><Link href={disclosureUrl}>상세</Link><span>/</span><span>문서</span>
         </div>
         <article className="document-reader" id="disclosure-document-reader">
           <header className="document-reader__heading">

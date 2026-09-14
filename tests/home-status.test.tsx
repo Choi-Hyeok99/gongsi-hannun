@@ -111,6 +111,9 @@ describe("home status presentation", () => {
     const root = fileURLToPath(new URL("..", import.meta.url));
     const home = readFileSync(`${root}/src/app/page.tsx`, "utf8");
     expect(home).not.toContain("3,931");
+    expect(home).not.toContain('name: "삼성전자"');
+    expect(home).not.toContain('stockCode: "005930"');
     expect(home).toContain("operationalStatus.activeCompanyCount");
+    expect(home).toContain("browseCompaniesPage");
   });
 });

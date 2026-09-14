@@ -196,5 +196,5 @@ function getPriceNotice(snapshot: DailyPriceSnapshot, compact: boolean): string 
   const latestDate = formatDate(snapshot.latest?.tradingDate);
   if (snapshot.status === "INSUFFICIENT_HISTORY") return `기준일 ${latestDate} · 비교 가능한 직전 거래일 데이터 없음`;
   if (snapshot.status === "STALE") return `기준일 ${latestDate} · 최신 일별 종가 수집 지연`;
-  return compact ? `기준일 ${latestDate} · 최근 1개월 일별 종가 · KRX` : `기준일 ${latestDate} · 일별 종가 · 실시간 시세 아님`;
+  return compact ? `기준일 ${latestDate} · 최근 1개월 일별 종가 · KRX` : `기준일 ${latestDate} · KRX 거래일별 종가`;
 }

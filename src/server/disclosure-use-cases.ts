@@ -78,12 +78,16 @@ export async function listDisclosureCalendar(
   rawMonth: string | null,
   today = new Date(),
 ): Promise<Readonly<{ month: string; items: readonly DisclosureSummary[] }>> {
-  const fallbackMonth = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(today).slice(0, 7);
-  const month = rawMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : fallbackMonth;
+  const month = resolveDisclosureCalendarMonth(rawMonth, today);
   const [year, monthNumber] = month.split("-").map(Number);
   const lastDay = new Date(Date.UTC(year!, monthNumber!, 0)).getUTCDate();
   const items = await repository.findByDateRange(`${month}-01`, `${month}-${String(lastDay).padStart(2, "0")}`, 300);
   return { month, items };
+}
+
+export function resolveDisclosureCalendarMonth(rawMonth: string | null, today = new Date()): string {
+  const fallbackMonth = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(today).slice(0, 7);
+  return rawMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : fallbackMonth;
 }
 
 export function findCorrectionTimeline(
