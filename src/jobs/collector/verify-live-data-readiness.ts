@@ -11,15 +11,15 @@ const environmentSchema = z.object({
   KRX_API_KEY: z.string().min(1),
 });
 
-const schemaChecks = [
-  { table: "companies", columns: "id,stock_code,market,industry_category,industry_sync_status" },
-  { table: "ingestion_runs", columns: "id,job_type,status,source,trading_date,error_code" },
-  { table: "source_disclosures", columns: "id,receipt_no,document_collection_status,last_seen_at" },
+export const liveDataSchemaChecks = [
+  { table: "companies", columns: "id,stock_code,market,industry_category,industry_profile_synced_at" },
+  { table: "ingestion_runs", columns: "id,job_type,status,range_start,range_end,error_code" },
+  { table: "source_disclosures", columns: "id,receipt_no,content_fetch_status,received_at" },
   { table: "disclosure_ingestion_observations", columns: "ingestion_run_id,source_disclosure_id,observed_at" },
   { table: "events", columns: "id,rule_importance_score,visibility" },
   { table: "disclosure_documents", columns: "id,source_disclosure_id" },
   { table: "daily_prices", columns: "id,trading_date,open_price,high_price,low_price,close_price,volume" },
-  { table: "watchlist_alert_settings", columns: "id,minimum_rule_score" },
+  { table: "watchlist_alert_settings", columns: "user_id,company_id,minimum_importance_score" },
   { table: "in_app_notifications", columns: "id,read_at" },
 ] as const;
 
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
 }
 
 async function verifyDatabaseSchema(client: SupabaseClient): Promise<readonly CheckResult[]> {
-  return Promise.all(schemaChecks.map(async ({ table, columns }) => {
+  return Promise.all(liveDataSchemaChecks.map(async ({ table, columns }) => {
     const { error } = await client.from(table).select(columns, { head: true, count: "exact" });
     return error
       ? { name: `Supabase ${table}`, ok: false, detail: "테이블 또는 최신 migration 열을 확인하세요." }
