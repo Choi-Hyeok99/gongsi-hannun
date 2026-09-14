@@ -2,14 +2,17 @@ import Link from "next/link";
 import { CompanySearchForm } from "@/components/CompanySearchForm";
 import { DailyPriceChart } from "@/components/DailyPriceChart";
 import { DisclosureList } from "@/components/DisclosureList";
+import { HomeCompanyCount, HomeDisclosureCollectionStatus } from "@/components/HomeDataStatus";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
 import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDailyPriceQueryRepository } from "@/data/supabase-daily-price-query-repository";
+import { createHomeStatusRepository } from "@/data/supabase-home-status-repository";
 import { getCompany } from "@/server/company-use-cases";
 import { getDailyPriceSnapshotsOrEmpty } from "@/server/daily-price-use-cases";
 import { listLatestDisclosures } from "@/server/disclosure-use-cases";
+import { getHomeOperationalStatus } from "@/server/home-status-use-cases";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +30,11 @@ const featuredCompanies = [
 export default async function HomePage() {
   const dailyPriceRepository = createDailyPriceQueryRepository();
   const companyRepository = createCompanyRepository();
-  const [latestDisclosures, featuredPrices, featuredCompanyDetails] = await Promise.all([
+  const [latestDisclosures, featuredPrices, featuredCompanyDetails, operationalStatus] = await Promise.all([
     listLatestDisclosures(createDisclosureRepository(), 8),
     getDailyPriceSnapshotsOrEmpty(dailyPriceRepository, featuredCompanies.map((company) => company.stockCode), "1M"),
     Promise.all(featuredCompanies.map((company) => getCompany(companyRepository, company.stockCode))),
+    getHomeOperationalStatus(createHomeStatusRepository),
   ]);
 
   return (
@@ -81,11 +85,12 @@ export default async function HomePage() {
         <section className="content-container section" aria-labelledby="home-disclosures-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">실시간 업데이트</p>
+              <p className="eyebrow">평일 10분 간격 수집</p>
               <h2 id="home-disclosures-heading">오늘의 주요 공시</h2>
             </div>
             <Link className="text-link" href="/disclosures">전체 공시 보기</Link>
           </div>
+          <HomeDisclosureCollectionStatus status={operationalStatus} />
           <DisclosureList disclosures={latestDisclosures} />
         </section>
 
@@ -93,9 +98,9 @@ export default async function HomePage() {
           <div className="notice-card">
             <div>
               <p className="eyebrow">데이터 안내</p>
-              <h2>3,931개 상장기업 정보를 연결했습니다</h2>
+              <HomeCompanyCount count={operationalStatus.activeCompanyCount} />
             </div>
-            <p>OpenDART에서 수집한 최신 공시를 기업별 타임라인과 함께 제공합니다.</p>
+            <p>OpenDART에서 수집한 최신 공시는 기업별 타임라인에서 확인할 수 있습니다.</p>
           </div>
         </section>
       </main>

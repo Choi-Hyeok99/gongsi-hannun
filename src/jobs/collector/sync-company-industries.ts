@@ -13,22 +13,26 @@ type Dependencies = Readonly<{
   maxCompanies?: number;
   delayMs?: number;
   maxConsecutiveFailures?: number;
+  startingAfterId?: string;
+  retryBefore?: string;
   pause?: (delayMs: number) => Promise<void>;
 }>;
 
 export async function syncCompanyIndustries(
   dependencies: Dependencies,
 ): Promise<CompanyIndustrySyncCounts> {
-  const batchSize = constrainInteger(dependencies.batchSize ?? 100, 1, 500);
-  const maxCompanies = constrainInteger(dependencies.maxCompanies ?? 4_000, 1, 20_000);
+  const batchSize = constrainInteger(dependencies.batchSize ?? 50, 1, 100);
+  const maxCompanies = constrainInteger(dependencies.maxCompanies ?? 250, 1, 500);
   const delayMs = constrainInteger(dependencies.delayMs ?? 120, 0, 10_000);
   const maxConsecutiveFailures = constrainInteger(dependencies.maxConsecutiveFailures ?? 10, 1, 100);
   const pause = dependencies.pause ?? wait;
-  const runId = await dependencies.repository.startRun();
+  const retryBefore = dependencies.retryBefore ?? new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+  const runOptions = { limit: maxCompanies, startingAfterId: dependencies.startingAfterId, retryBefore };
+  const runId = await dependencies.repository.startRun(runOptions);
   let attemptedCount = 0;
   let updatedCount = 0;
   let failedCount = 0;
-  let afterId: string | undefined;
+  let afterId = dependencies.startingAfterId;
   let stoppedReason: string | undefined;
   let consecutiveFailures = 0;
 
@@ -36,6 +40,7 @@ export async function syncCompanyIndustries(
     const targets = await dependencies.repository.findPending(
       Math.min(batchSize, maxCompanies - attemptedCount),
       afterId,
+      retryBefore,
     );
     if (targets.length === 0) break;
 
@@ -54,7 +59,7 @@ export async function syncCompanyIndustries(
         await dependencies.repository.recordFailure(target, error);
         if (error instanceof ExternalServiceError && error.code === "RATE_LIMITED") {
           stoppedReason = "RATE_LIMITED";
-          const counts = await buildCounts(dependencies.repository, attemptedCount, updatedCount, failedCount);
+          const counts = await buildCounts(dependencies.repository, attemptedCount, updatedCount, failedCount, afterId);
           await dependencies.repository.finishRun(runId, counts, stoppedReason);
           throw error;
         }
@@ -68,7 +73,7 @@ export async function syncCompanyIndustries(
     if (stoppedReason) break;
   }
 
-  const counts = await buildCounts(dependencies.repository, attemptedCount, updatedCount, failedCount);
+  const counts = await buildCounts(dependencies.repository, attemptedCount, updatedCount, failedCount, afterId);
   if (!stoppedReason && counts.remainingCount > 0) {
     stoppedReason = attemptedCount === maxCompanies ? "MAX_COMPANIES_REACHED" : "FAILED_COMPANIES_REMAIN";
   }
@@ -81,8 +86,15 @@ async function buildCounts(
   attemptedCount: number,
   updatedCount: number,
   failedCount: number,
+  nextCursor: string | undefined,
 ): Promise<CompanyIndustrySyncCounts> {
-  return { attemptedCount, updatedCount, failedCount, remainingCount: await repository.countPending() };
+  return {
+    attemptedCount,
+    updatedCount,
+    failedCount,
+    remainingCount: await repository.countPending(),
+    nextCursor: nextCursor ?? null,
+  };
 }
 
 function constrainInteger(value: number, minimum: number, maximum: number): number {

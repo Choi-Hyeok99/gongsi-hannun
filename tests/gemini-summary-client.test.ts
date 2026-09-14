@@ -12,6 +12,7 @@ const candidate: AiAnalysisCandidate = {
   ruleImportanceScore: 70,
   contentText: "매출액과 영업이익 관련 공시 원문입니다.",
   inputHash: "a".repeat(64),
+  sourceDocument: { id: "document-1", title: "주요 문서", kind: "MAIN", contentHash: "b".repeat(64) },
 };
 
 const validSummary = {
@@ -20,6 +21,7 @@ const validSummary = {
   checkpoints: ["매출액과 영업이익 변화를 확인하세요."],
   cautions: ["요약만으로 투자 결정을 내리지 마세요."],
   importanceScore: 70,
+  factCandidates: [],
 };
 
 describe("GeminiDisclosureSummaryClient", () => {

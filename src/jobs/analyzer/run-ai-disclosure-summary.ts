@@ -3,7 +3,7 @@ import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-ca
 import { readAiAnalysisEnvironment } from "@/server/ai-env";
 import { GeminiDisclosureSummaryClient } from "./gemini-summary-client";
 
-const ANALYSIS_VERSION = "disclosure-summary-v1";
+const ANALYSIS_VERSION = "disclosure-summary-v2-verified-facts";
 
 async function main() {
   const environment = readAiAnalysisEnvironment();

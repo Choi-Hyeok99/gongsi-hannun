@@ -16,6 +16,22 @@ export type CompanyIndustrySyncCounts = Readonly<{
   updatedCount: number;
   failedCount: number;
   remainingCount: number;
+  nextCursor: string | null;
+}>;
+
+export type CompanyIndustryCompleteness = Readonly<{
+  totalActiveListedCount: number;
+  marketOtherCount: number;
+  categoryOtherCount: number;
+  categoryUnclassifiedCount: number;
+  profilePendingCount: number;
+  profileFailedCount: number;
+}>;
+
+export type CompanyIndustrySyncRunOptions = Readonly<{
+  limit: number;
+  startingAfterId?: string;
+  retryBefore: string;
 }>;
 
 export interface CompanyIndustrySource {
@@ -23,8 +39,8 @@ export interface CompanyIndustrySource {
 }
 
 export interface CompanyIndustrySyncRepository {
-  startRun(): Promise<string>;
-  findPending(limit: number, afterId?: string): Promise<readonly CompanyIndustrySyncTarget[]>;
+  startRun(options: CompanyIndustrySyncRunOptions): Promise<string>;
+  findPending(limit: number, afterId: string | undefined, retryBefore: string): Promise<readonly CompanyIndustrySyncTarget[]>;
   saveProfile(
     target: CompanyIndustrySyncTarget,
     profile: CompanyIndustryProfile | null,
@@ -32,5 +48,6 @@ export interface CompanyIndustrySyncRepository {
   ): Promise<void>;
   recordFailure(target: CompanyIndustrySyncTarget, error: unknown): Promise<void>;
   countPending(): Promise<number>;
+  getCompleteness(): Promise<CompanyIndustryCompleteness>;
   finishRun(runId: string, counts: CompanyIndustrySyncCounts, stoppedReason?: string): Promise<void>;
 }

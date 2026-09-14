@@ -1,4 +1,9 @@
 import type { DisclosureEventType } from "@/domain/disclosure-classification";
+import type {
+  DisclosureFactCandidate,
+  DisclosureFactSourceDocument,
+  VerifiedDisclosureFact,
+} from "@/domain/ai-disclosure-facts";
 
 export type AiDisclosureSummary = Readonly<{
   plainSummary: string;
@@ -7,7 +12,12 @@ export type AiDisclosureSummary = Readonly<{
   cautions: readonly string[];
   importanceScore: number;
   generatedAt: string;
+  verifiedFacts: readonly VerifiedDisclosureFact[];
 }>;
+
+export type AiDisclosureSummaryState =
+  | Readonly<{ status: "NOT_GENERATED" | "PENDING" | "FAILED"; summary: null }>
+  | Readonly<{ status: "READY"; summary: AiDisclosureSummary }>;
 
 export type AiAnalysisCandidate = Readonly<{
   eventId: string;
@@ -19,14 +29,19 @@ export type AiAnalysisCandidate = Readonly<{
   ruleImportanceScore: number;
   contentText: string;
   inputHash: string;
+  sourceDocument: DisclosureFactSourceDocument;
 }>;
 
 export type GeneratedAiDisclosureSummary = Omit<AiDisclosureSummary, "generatedAt">;
 
+export type GeneratedAiDisclosureSummaryCandidate = Omit<GeneratedAiDisclosureSummary, "verifiedFacts"> & Readonly<{
+  factCandidates: readonly DisclosureFactCandidate[];
+}>;
+
 export interface AiDisclosureSummaryProvider {
   readonly providerName: string;
   readonly modelName: string;
-  summarize(candidate: AiAnalysisCandidate): Promise<GeneratedAiDisclosureSummary>;
+  summarize(candidate: AiAnalysisCandidate): Promise<GeneratedAiDisclosureSummaryCandidate>;
 }
 
 export interface AiAnalysisRepository {

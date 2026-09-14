@@ -2,7 +2,7 @@ import { z } from "zod";
 import type {
   AiAnalysisCandidate,
   AiDisclosureSummaryProvider,
-  GeneratedAiDisclosureSummary,
+  GeneratedAiDisclosureSummaryCandidate,
 } from "@/domain/ai-disclosure-summary";
 
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";
@@ -15,6 +15,13 @@ const summarySchema = z.object({
   checkpoints: z.array(z.string().trim().min(2).max(180)).min(1).max(3),
   cautions: z.array(z.string().trim().min(2).max(180)).min(1).max(3),
   importanceScore: z.number().int().min(0).max(100),
+  factCandidates: z.array(z.object({
+    kind: z.enum(["AMOUNT", "PERCENTAGE", "QUANTITY", "PERIOD"]),
+    label: z.string().trim().min(2).max(80),
+    value: z.string().trim().min(1).max(80),
+    unit: z.string().trim().min(1).max(30),
+    sourceQuote: z.string().trim().min(4).max(300),
+  }).strict()).max(6),
 }).strict();
 
 type GeminiResponse = Readonly<{
@@ -44,7 +51,7 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
     this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
   }
 
-  async summarize(candidate: AiAnalysisCandidate): Promise<GeneratedAiDisclosureSummary> {
+  async summarize(candidate: AiAnalysisCandidate): Promise<GeneratedAiDisclosureSummaryCandidate> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -92,8 +99,24 @@ function buildRequest(candidate: AiAnalysisCandidate) {
           checkpoints: { type: "array", minItems: 1, maxItems: 3, items: { type: "string" } },
           cautions: { type: "array", minItems: 1, maxItems: 3, items: { type: "string" } },
           importanceScore: { type: "integer", minimum: 0, maximum: 100 },
+          factCandidates: {
+            type: "array",
+            maxItems: 6,
+            description: "원문에서 숫자와 단위를 그대로 인용할 수 있는 후보만 작성. 숫자가 없으면 빈 배열",
+            items: {
+              type: "object",
+              properties: {
+                kind: { type: "string", enum: ["AMOUNT", "PERCENTAGE", "QUANTITY", "PERIOD"] },
+                label: { type: "string", description: "숫자의 의미를 설명하는 짧은 이름" },
+                value: { type: "string", description: "sourceQuote에 실제로 존재하는 숫자 또는 날짜 문자열" },
+                unit: { type: "string", description: "sourceQuote에 실제로 존재하는 원 단위 문자열" },
+                sourceQuote: { type: "string", description: "value와 unit을 포함해 공시 원문에서 그대로 복사한 짧은 구절" },
+              },
+              required: ["kind", "label", "value", "unit", "sourceQuote"],
+            },
+          },
         },
-        required: ["plainSummary", "whyItMatters", "checkpoints", "cautions", "importanceScore"],
+        required: ["plainSummary", "whyItMatters", "checkpoints", "cautions", "importanceScore", "factCandidates"],
       },
     },
   };
@@ -108,6 +131,9 @@ function buildPrompt(candidate: AiAnalysisCandidate): string {
     `공시일: ${candidate.disclosedOn}`,
     `분류: ${candidate.eventType}`,
     `규칙 기반 중요도: ${candidate.ruleImportanceScore}`,
+    "factCandidates에는 금액·비율·수량·기간 중 원문에서 직접 확인되는 항목만 넣으세요.",
+    "value, unit, sourceQuote는 아래 원문에 실제 존재하는 표기를 고치지 말고 그대로 복사하세요.",
+    "추론하거나 계산한 값, 원문 밖의 값, 비교값은 넣지 마세요. 확인 가능한 숫자가 없으면 빈 배열을 반환하세요.",
     "--- 공시 원문 시작 ---",
     content,
     "--- 공시 원문 끝 ---",

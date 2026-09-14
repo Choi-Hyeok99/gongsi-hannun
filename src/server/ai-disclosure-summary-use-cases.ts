@@ -4,6 +4,7 @@ import type {
   AiDisclosureSummary,
   AiDisclosureSummaryProvider,
 } from "@/domain/ai-disclosure-summary";
+import { verifyDisclosureFactCandidates } from "@/domain/ai-disclosure-facts";
 
 export async function getPublishedAiSummary(repository: AiAnalysisRepository, receiptNumber: string): Promise<AiDisclosureSummary | null> {
   return repository.findPublishedByReceiptNumber(receiptNumber);
@@ -26,7 +27,15 @@ export async function analyzePendingDisclosures(
       continue;
     }
     try {
-      const summary = await provider.summarize(candidate);
+      const generated = await provider.summarize(candidate);
+      const summary = {
+        plainSummary: generated.plainSummary,
+        whyItMatters: generated.whyItMatters,
+        checkpoints: generated.checkpoints,
+        cautions: generated.cautions,
+        importanceScore: generated.importanceScore,
+        verifiedFacts: verifyDisclosureFactCandidates(candidate, generated.factCandidates),
+      };
       await repository.complete(candidate.eventId, options.analysisVersion, provider, summary);
       succeededCount += 1;
     } catch (error) {
