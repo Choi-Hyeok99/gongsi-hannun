@@ -26,6 +26,7 @@ type AiAnalysisRow = Readonly<{
   cautions: unknown;
   ai_importance_score: unknown;
   generated_at: unknown;
+  updated_at: unknown;
   extracted_facts: unknown;
 }>;
 
@@ -47,10 +48,10 @@ export async function findAiDisclosureSummaryState(receiptNumber: string): Promi
   if (published) return { status: "READY", summary: toPublishedSummary(published) };
 
   const latestStatus = rows[0]?.status;
-  if (latestStatus === "PENDING" || latestStatus === "PROCESSING") {
-    return { status: "PENDING", summary: null };
-  }
-  if (latestStatus === "FAILED") return { status: "FAILED", summary: null };
+  const updatedAt = optionalTimestamp(rows[0]?.updated_at);
+  if (latestStatus === "PENDING") return { status: "PENDING", summary: null, updatedAt };
+  if (latestStatus === "PROCESSING") return { status: "PROCESSING", summary: null, updatedAt };
+  if (latestStatus === "FAILED") return { status: "FAILED", summary: null, updatedAt };
   return { status: "NOT_GENERATED", summary: null };
 }
 
@@ -71,4 +72,9 @@ function toPublishedSummary(row: AiAnalysisRow): AiDisclosureSummary {
 
 function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function optionalTimestamp(value: unknown): string | null {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return null;
+  return value;
 }
