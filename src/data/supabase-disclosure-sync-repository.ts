@@ -16,6 +16,7 @@ type RepositoryOptions = Readonly<{
 }>;
 
 type CompanyRow = Readonly<{ id: string; dart_corp_code: string }>;
+type DisclosureRow = Readonly<{ id: string; receipt_no: string }>;
 
 export class SupabaseDisclosureSyncRepository implements DisclosureSyncRepository {
   constructor(private readonly client: SupabaseClient) {}
@@ -35,7 +36,11 @@ export class SupabaseDisclosureSyncRepository implements DisclosureSyncRepositor
     return String(data.id);
   }
 
-  async upsertDisclosures(records: readonly DisclosureRecord[]): Promise<DisclosureSyncCounts> {
+  async upsertDisclosures(
+    runId: string,
+    collectedAt: string,
+    records: readonly DisclosureRecord[],
+  ): Promise<DisclosureSyncCounts> {
     if (records.length === 0) {
       return { readCount: 0, createdCount: 0, updatedCount: 0, failedCount: 0 };
     }
@@ -47,11 +52,13 @@ export class SupabaseDisclosureSyncRepository implements DisclosureSyncRepositor
     for (const batch of batches(matched, BATCH_SIZE)) {
       const rows = batch.map((record) => ({
         company_id: companyByCorpCode.get(record.dartCorpCode),
+        ingestion_run_id: runId,
         source: "OPENDART",
         receipt_no: record.receiptNumber,
         report_name: record.reportName,
         filer_name: record.filerName,
         disclosed_on: record.disclosedOn,
+        received_at: collectedAt,
         original_url: record.originalUrl,
         raw_metadata: {
           corpClass: record.corpClass,
@@ -60,10 +67,12 @@ export class SupabaseDisclosureSyncRepository implements DisclosureSyncRepositor
         },
         disclosure_status: CORRECTION_MARKER.test(record.reportName) ? "REVIEW_REQUIRED" : "ACTIVE",
       }));
-      const { error } = await this.client
+      const { data, error } = await this.client
         .from("source_disclosures")
-        .upsert(rows, { onConflict: "source,receipt_no" });
+        .upsert(rows, { onConflict: "source,receipt_no" })
+        .select("id,receipt_no");
       if (error) throw new DataAccessError("공시 정보를 저장하지 못했습니다.");
+      await this.recordObservations(runId, collectedAt, (data ?? []) as DisclosureRow[]);
     }
 
     await this.updateKnownMarkets(matched);
@@ -77,6 +86,25 @@ export class SupabaseDisclosureSyncRepository implements DisclosureSyncRepositor
       updatedCount,
       failedCount: records.length - matched.length,
     };
+  }
+
+  private async recordObservations(
+    runId: string,
+    observedAt: string,
+    disclosures: readonly DisclosureRow[],
+  ): Promise<void> {
+    if (disclosures.length === 0) return;
+    const { error } = await this.client
+      .from("disclosure_ingestion_observations")
+      .upsert(
+        disclosures.map((disclosure) => ({
+          ingestion_run_id: runId,
+          source_disclosure_id: disclosure.id,
+          observed_at: observedAt,
+        })),
+        { onConflict: "ingestion_run_id,source_disclosure_id" },
+      );
+    if (error) throw new DataAccessError("공시 수집 출처 기록을 저장하지 못했습니다.");
   }
 
   async completeRun(runId: string, counts: DisclosureSyncCounts): Promise<void> {

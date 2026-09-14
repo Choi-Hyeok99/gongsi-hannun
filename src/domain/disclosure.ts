@@ -41,7 +41,11 @@ export interface DisclosureSource {
 
 export interface DisclosureSyncRepository {
   startRun(fromDate: string, toDate: string): Promise<string>;
-  upsertDisclosures(records: readonly DisclosureRecord[]): Promise<DisclosureSyncCounts>;
+  upsertDisclosures(
+    runId: string,
+    collectedAt: string,
+    records: readonly DisclosureRecord[],
+  ): Promise<DisclosureSyncCounts>;
   completeRun(runId: string, counts: DisclosureSyncCounts): Promise<void>;
   failRun(runId: string, readCount: number, error: unknown): Promise<void>;
 }

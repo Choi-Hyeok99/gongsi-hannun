@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logout } from "@/app/auth/actions";
+import { PrimaryNavigation } from "@/components/PrimaryNavigation";
 import { createNotificationCenterRepository } from "@/data/supabase-notification-center-repository";
 import { countUnreadNotifications } from "@/server/notification-center-use-cases";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -23,12 +24,10 @@ export async function SiteHeader() {
           <span className="brand-mark" aria-hidden="true">공</span>
           <span>공시한눈</span>
         </Link>
-        <nav aria-label="주요 메뉴">
-          <Link href="/search">기업</Link>
-          <Link href="/disclosures">오늘의 주요 공시</Link>
-          <Link href="/calendar">공시 달력</Link>
+        <div className="site-header__nav-cluster">
+          <PrimaryNavigation />
           {user ? (
-            <div className="auth-nav">
+            <nav className="account-navigation" aria-label="사용자 메뉴">
               <Link href="/watchlist">관심기업</Link>
               <Link className="notification-nav" href="/notifications" aria-label={`중요 공시 알림${unreadCount ? `, 읽지 않은 알림 ${unreadCount}개` : ""}`}>
                 <span aria-hidden="true">🔔</span>
@@ -38,11 +37,11 @@ export async function SiteHeader() {
                 <span title={user.email}>{user.email}</span>
                 <button type="submit">로그아웃</button>
               </form>
-            </div>
+            </nav>
           ) : (
-            <div className="auth-nav"><Link href="/login">로그인</Link><Link className="nav-signup" href="/signup">회원가입</Link></div>
+            <nav className="account-navigation" aria-label="사용자 메뉴"><Link href="/login">로그인</Link><Link className="nav-signup" href="/signup">회원가입</Link></nav>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   );

@@ -27,7 +27,7 @@ export function WatchlistAlertCard({
         <span className="company-avatar company-avatar--large" aria-hidden="true">{company.name.slice(0, 1)}</span>
         <div>
           <Link href={`/companies/${company.stockCode}`}><strong>{company.name}</strong></Link>
-          <p>{company.stockCode} · {company.market === "OTHER" ? "시장 정보 준비 중" : company.market}</p>
+          <p>{company.stockCode} · {company.market === "OTHER" ? "시장 미분류" : company.market}</p>
         </div>
       </div>
       <form action={updateWatchlistAlertPreference} className="alert-preference-form">
