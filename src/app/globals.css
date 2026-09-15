@@ -287,6 +287,15 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .notification-card__title { overflow: hidden; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
 .notification-card__reason { color: #475467; font-size: 13px; }
 .notification-card__time { color: var(--muted); font-size: 12px; }
+.push-settings { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 20px; align-items: center; margin: 0 0 28px; padding: 20px; border: 1px solid #bfd7f7; border-radius: 16px; background: var(--surface-soft); }
+.push-settings h2 { font-size: 20px; }
+.push-settings p { margin: 5px 0 0; color: var(--text-strong-muted); font-size: 14px; }
+.push-settings .eyebrow { margin: 0 0 4px; font-size: 11px; }
+.push-settings > button, .push-settings__status { grid-column: 2; grid-row: 1; min-width: 170px; }
+.push-settings__status { color: var(--muted); text-align: right; font-size: 13px; }
+.push-settings__message, .push-settings > small { grid-column: 1 / -1; }
+.push-settings__message { color: var(--primary) !important; font-weight: 750; }
+.push-settings > small { color: var(--muted); }
 .event-type-badge { padding: 2px 7px; border-radius: 999px; color: #1056bd !important; background: #e8f2ff; font-size: 11px; font-weight: 800; }
 .disclosure-detail { max-width: 920px; padding: 34px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
 .disclosure-detail__heading { padding-bottom: 26px; border-bottom: 1px solid var(--border); }
@@ -583,6 +592,7 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 :root[data-theme="dark"] .notification-card { border-color: #315681; background: var(--surface-soft); }
 :root[data-theme="dark"] .notification-card__reason,
 :root[data-theme="dark"] .price-empty strong { color: var(--text-strong-muted); }
+:root[data-theme="dark"] .push-settings { border-color: #315681; background: var(--surface-soft); }
 :root[data-theme="dark"] .price-chart__source { color: var(--text-strong-muted); background: #263245; }
 :root[data-theme="dark"] .price-chart__line--down { stroke: #69a7ff; }
 :root[data-theme="dark"] .price-change--down { color: #69a7ff; }
@@ -655,6 +665,9 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   .notification-card__status { width: fit-content; }
   .notification-card__body { grid-column: 1 / -1; grid-row: 2; }
   .notification-card__title { overflow: visible; white-space: normal; }
+  .push-settings { grid-template-columns: 1fr; padding: 16px; }
+  .push-settings > button, .push-settings__status { width: 100%; min-width: 0; grid-column: 1; grid-row: auto; }
+  .push-settings__status { text-align: left; }
   .company-avatar--hero { width: 60px; height: 60px; border-radius: 18px; }
   .company-facts div { grid-template-columns: 86px minmax(0, 1fr); gap: 12px; }
   .disclosure-card { grid-template-columns: 1fr auto; gap: 8px 12px; padding: 16px; }

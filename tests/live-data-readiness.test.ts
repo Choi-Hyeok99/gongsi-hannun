@@ -23,6 +23,14 @@ describe("liveDataSchemaChecks", () => {
         table: "watchlist_alert_settings",
         columns: "user_id,company_id,minimum_importance_score",
       },
+      {
+        table: "web_push_subscriptions",
+        columns: "id,user_id,endpoint,minimum_importance_score,disabled_at",
+      },
+      {
+        table: "web_push_deliveries",
+        columns: "notification_id,subscription_id,status,attempt_count",
+      },
     ]));
   });
 });

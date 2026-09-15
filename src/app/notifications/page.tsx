@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { PushNotificationSettings } from "@/components/PushNotificationSettings";
 import { createNotificationCenterRepository } from "@/data/supabase-notification-center-repository";
 import { getDisclosureEventTypeLabel } from "@/domain/disclosure-classification";
 import { listNotifications } from "@/server/notification-center-use-cases";
@@ -42,6 +43,7 @@ export default async function NotificationsPage() {
           {unreadCount > 0 ? <form action={markAllNotificationsRead}><button className="secondary-button" type="submit">모두 읽음</button></form> : null}
         </section>
         <p className="alert-disclaimer">이 알림은 공시 확인을 돕는 자동 분류 정보이며 투자 권유가 아닙니다. 투자 판단 전 원문을 확인하세요.</p>
+        <PushNotificationSettings />
         <section aria-labelledby="notification-heading">
           <div className="result-heading"><h2 id="notification-heading">내 알림</h2><span>미읽음 {unreadCount}개 · 전체 {notifications.length}개</span></div>
           {notifications.length > 0 ? (
