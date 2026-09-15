@@ -14,10 +14,10 @@ describe("AiDisclosureSummaryPreview", () => {
   };
 
   it.each([
-    [{ status: "NOT_GENERATED", summary: null } as const, "분석 없음", "생성된 심층 리포트가 없습니다."],
-    [{ status: "PENDING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "분석 대기", "분석 작업이 대기열에 있습니다."],
-    [{ status: "PROCESSING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "분석 중", "공시 원문을 분석하고 있습니다."],
-    [{ status: "FAILED", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "분석 실패", "최근 분석 작업을 완료하지 못했습니다."],
+    [{ status: "NOT_GENERATED", summary: null } as const, "원문 제공", "AI 해설은 아직 준비되지 않았습니다."],
+    [{ status: "PENDING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 예정", "AI 해설을 준비하고 있습니다."],
+    [{ status: "PROCESSING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "해설 작성 중", "공시 내용을 확인하고 있습니다."],
+    [{ status: "FAILED", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 지연", "AI 해설 준비가 지연되고 있습니다."],
   ])("shows only the factual status and source CTA", (state, badge, title) => {
     const markup = renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} state={state} />);
 
@@ -26,6 +26,14 @@ describe("AiDisclosureSummaryPreview", () => {
     expect(markup).toContain(title);
     expect(markup).toContain('href="https://dart.fss.or.kr/example"');
     expect(markup).not.toContain("실제 핵심 요약입니다.");
+  });
+
+  it("explains that a delayed AI explanation does not mean the disclosure data failed", () => {
+    const markup = renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} state={{ status: "FAILED", summary: null, updatedAt: "2026-09-14T03:20:00Z" }} />);
+
+    expect(markup).toContain("공시 데이터의 오류가 아닙니다.");
+    expect(markup).toContain("원문과 제출 문서는 정상적으로 확인할 수 있으며");
+    expect(markup).not.toContain("분석 실패");
   });
 
   it("renders a complete report entirely from a stored successful analysis", () => {
