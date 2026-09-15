@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   extractNotificationReason,
+  filterNotifications,
   parseAlertPreference,
+  parseNotificationView,
   type AlertPreferenceRepository,
   type NotificationCenterRepository,
 } from "@/domain/notification-center";
@@ -46,6 +48,13 @@ describe("alert preference input", () => {
     });
   });
 
+  it("accepts the broad 60 point preset", () => {
+    const formData = new FormData();
+    formData.set("companyId", "123e4567-e89b-12d3-a456-426614174000");
+    formData.set("minimumImportanceScore", "60");
+    expect(parseAlertPreference(formData)?.minimumImportanceScore).toBe(60);
+  });
+
   it("rejects an unsupported score or event type", () => {
     const formData = new FormData();
     formData.set("companyId", "123e4567-e89b-12d3-a456-426614174000");
@@ -64,6 +73,19 @@ describe("alert preference input", () => {
   it("separates the report title from its classification reason", () => {
     expect(extractNotificationReason("합병결정 · 기업 구조 변화입니다.", "합병결정"))
       .toBe("기업 구조 변화입니다.");
+  });
+});
+
+describe("notification history filters", () => {
+  const items = [
+    { id: "1", companyName: "한눈전자", stockCode: "000001", receiptNumber: "1", reportName: "공시", eventType: "EARNINGS" as const, importanceScore: 70, reason: "실적", disclosedOn: "2026-09-15", createdAt: "2026-09-15T00:00:00Z", readAt: null },
+    { id: "2", companyName: "한눈바이오", stockCode: "000002", receiptNumber: "2", reportName: "공시", eventType: "CLINICAL_RESULT" as const, importanceScore: 85, reason: "임상", disclosedOn: "2026-09-15", createdAt: "2026-09-15T01:00:00Z", readAt: "2026-09-15T02:00:00Z" },
+  ];
+
+  it("normalizes unknown views and filters unread or critical items", () => {
+    expect(parseNotificationView("unknown")).toBe("all");
+    expect(filterNotifications(items, "unread").map((item) => item.id)).toEqual(["1"]);
+    expect(filterNotifications(items, "critical").map((item) => item.id)).toEqual(["2"]);
   });
 });
 

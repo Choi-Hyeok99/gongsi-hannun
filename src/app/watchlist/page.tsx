@@ -48,7 +48,7 @@ export default async function WatchlistPage({ searchParams }: Props) {
         {status.message ? <p className="auth-message auth-message--success" role="status">{status.message}</p> : null}
         {status.error ? <p className="auth-message auth-message--error" role="alert">{status.error}</p> : null}
         <p className="alert-disclaimer">알림은 자동 분류된 공시 안내이며 투자 권유가 아닙니다. 중요한 결정 전 공시 원문을 확인하세요.</p>
-        <section aria-labelledby="watchlist-heading">
+        <section id="alert-preferences" className="scroll-target" aria-labelledby="watchlist-heading">
           <div className="result-heading"><h2 id="watchlist-heading">저장한 기업</h2><span>{companies.length}개</span></div>
           {companies.length ? (
             <div className="watchlist-result-list">{companies.map((company) => (
