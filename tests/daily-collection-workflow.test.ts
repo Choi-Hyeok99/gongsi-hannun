@@ -20,5 +20,6 @@ describe("daily market data workflow", () => {
   it("keeps secrets in the Actions secret store", () => {
     expect(workflow).toContain("KRX_API_KEY: ${{ secrets.KRX_API_KEY }}");
     expect(workflow).toContain("SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}");
+    expect(workflow).toContain("WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}");
   });
 });

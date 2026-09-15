@@ -6,6 +6,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "공시한눈",
   description: "기업 공시를 쉽고 빠르게 확인합니다.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "공시한눈",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

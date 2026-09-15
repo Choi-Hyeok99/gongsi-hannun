@@ -14,6 +14,7 @@
     "verify:live-data": "tsx --env-file-if-exists=.env.local src/jobs/collector/verify-live-data-readiness.ts",
     "materialize:events": "tsx --env-file=.env.local src/jobs/collector/run-event-materialization.ts",
     "generate:disclosure-alerts": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-alert-generation.ts",
+    "send:web-push": "tsx --env-file=.env.local src/jobs/collector/run-web-push-delivery.ts",
     "analyze:disclosures": "tsx --env-file=.env.local src/jobs/analyzer/run-ai-disclosure-summary.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -30,6 +31,7 @@
     "next": "^15.5.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "web-push": "^3.6.7",
     "zod": "^4.1.5"
   },
   "devDependencies": {
@@ -37,6 +39,7 @@
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9.35.0",
     "eslint-config-next": "^15.5.3",
     "tsx": "^4.23.13",

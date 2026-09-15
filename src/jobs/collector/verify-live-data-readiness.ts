@@ -21,6 +21,8 @@ export const liveDataSchemaChecks = [
   { table: "daily_prices", columns: "id,trading_date,open_price,high_price,low_price,close_price,volume" },
   { table: "watchlist_alert_settings", columns: "user_id,company_id,minimum_importance_score" },
   { table: "in_app_notifications", columns: "id,read_at" },
+  { table: "web_push_subscriptions", columns: "id,user_id,endpoint,minimum_importance_score,disabled_at" },
+  { table: "web_push_deliveries", columns: "notification_id,subscription_id,status,attempt_count" },
 ] as const;
 
 type CheckResult = Readonly<{ name: string; ok: boolean; detail: string }>;

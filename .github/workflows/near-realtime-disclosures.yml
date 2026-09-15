@@ -81,6 +81,14 @@ jobs:
           npx tsx src/jobs/collector/run-disclosure-alert-generation.ts
           "${{ steps.dates.outputs.collection_date }}"
 
+      - name: Send opted-in web push notifications
+        continue-on-error: true
+        env:
+          WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
+          WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
+          WEB_PUSH_VAPID_SUBJECT: mailto:admin@gongsihannun.com
+        run: npx tsx src/jobs/collector/run-web-push-delivery.ts
+
       - name: Collect new filing documents
         continue-on-error: true
         env:
