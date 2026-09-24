@@ -89,6 +89,17 @@ describe("KrxDailyPriceClient", () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({ respCode: "429" }), { status: 200 }));
     await expect(new KrxDailyPriceClient({ apiKey: "private-key", fetcher }).fetchDailyPrices(range))
       .rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a temporary KRX server failure once", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response("", { status: 503 }))
+      .mockImplementation(async () => new Response(JSON.stringify({ OutBlock_1: [] }), { status: 200 }));
+
+    await expect(new KrxDailyPriceClient({ apiKey: "private-key", fetcher }).fetchDailyPrices(range))
+      .resolves.toEqual([]);
+    expect(fetcher).toHaveBeenCalledTimes(4);
   });
 
   it("rejects malformed numbers", async () => {
