@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useEffect, useState } from "react";
 
 type State = "checking" | "unsupported" | "disabled" | "enabled" | "denied";
@@ -22,8 +23,11 @@ export function PushNotificationSettings() {
   const [state, setState] = useState<State>("checking");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [deviceLabel, setDeviceLabel] = useState("이 기기");
 
   useEffect(() => {
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    setDeviceLabel(mobile ? "이 휴대폰" : "이 PC");
     if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
       setState("unsupported");
       return;
@@ -51,7 +55,7 @@ export function PushNotificationSettings() {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setState(permission === "denied" ? "denied" : "disabled");
-        setMessage("휴대폰 설정에서 공시한눈 알림을 허용해 주세요.");
+        setMessage("브라우저 또는 기기 설정에서 공시한눈 알림을 허용해 주세요.");
         return;
       }
       const registration = await navigator.serviceWorker.ready;
@@ -67,10 +71,10 @@ export function PushNotificationSettings() {
       });
       if (!response.ok) throw new Error("subscription_failed");
       setState("enabled");
-      setMessage("이 기기로 핵심 공시 알림을 보내드립니다.");
+      setMessage(`${deviceLabel}로 핵심 공시 알림을 보내드립니다.`);
     } catch {
       setState("disabled");
-      setMessage("휴대폰 알림을 켜지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setMessage("브라우저 알림을 켜지 못했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setBusy(false);
     }
@@ -91,9 +95,9 @@ export function PushNotificationSettings() {
         await subscription.unsubscribe();
       }
       setState("disabled");
-      setMessage("이 기기의 휴대폰 알림을 껐습니다.");
+      setMessage(`${deviceLabel}의 브라우저 알림을 껐습니다.`);
     } catch {
-      setMessage("휴대폰 알림을 해제하지 못했습니다. 다시 시도해 주세요.");
+      setMessage("브라우저 알림을 해제하지 못했습니다. 다시 시도해 주세요.");
     } finally {
       setBusy(false);
     }
@@ -103,24 +107,24 @@ export function PushNotificationSettings() {
     <section className="push-settings" aria-labelledby="push-settings-heading">
       <div>
         <p className="eyebrow">선택 기능</p>
-        <h2 id="push-settings-heading">휴대폰 알림</h2>
-        <p>사이트를 닫아도 핵심 공시를 휴대폰 알림창으로 받습니다. 사용자가 직접 허용한 이 기기에만 전송됩니다.</p>
+        <h2 id="push-settings-heading">PC·휴대폰 브라우저 알림</h2>
+        <p>사이트 탭을 닫아도 85점 이상 핵심 공시를 운영체제 알림창으로 받습니다. 직접 허용한 기기에만 전송됩니다.</p>
       </div>
       {state === "enabled" ? (
         <button className="secondary-button" type="button" disabled={busy} onClick={disable}>
-          {busy ? "해제 중…" : "이 기기 알림 끄기"}
+          {busy ? "해제 중…" : `${deviceLabel} 알림 끄기`}
         </button>
       ) : null}
       {state === "disabled" ? (
         <button className="primary-link" type="button" disabled={busy} onClick={enable}>
-          {busy ? "설정 중…" : "휴대폰 알림 받기"}
+          {busy ? "설정 중…" : `${deviceLabel} 알림 받기`}
         </button>
       ) : null}
       {state === "checking" ? <span className="push-settings__status">알림 설정 확인 중…</span> : null}
-      {state === "denied" ? <span className="push-settings__status">브라우저에서 알림이 차단되어 있습니다.</span> : null}
-      {state === "unsupported" ? <span className="push-settings__status">이 브라우저에서는 휴대폰 알림을 사용할 수 없습니다.</span> : null}
+      {state === "denied" ? <span className="push-settings__status">브라우저 설정에서 알림이 차단되어 있습니다.</span> : null}
+      {state === "unsupported" ? <span className="push-settings__status">이 브라우저에서는 푸시 알림을 사용할 수 없습니다.</span> : null}
       {message ? <p className="push-settings__message" role="status">{message}</p> : null}
-      <small>iPhone은 공시한눈을 홈 화면에 추가한 뒤 알림을 켤 수 있습니다.</small>
+      <small>PC는 Chrome·Edge 등 지원 브라우저에서, iPhone은 공시한눈을 홈 화면에 추가한 뒤 사용할 수 있습니다.</small>
     </section>
   );
 }

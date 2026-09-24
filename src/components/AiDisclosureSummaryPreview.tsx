@@ -173,24 +173,24 @@ function AiSummaryStatus(props: Props) {
 
 const STATUS_CONTENT = {
   NOT_GENERATED: {
-    badge: "분석 없음",
-    title: "생성된 심층 리포트가 없습니다.",
-    description: "현재 저장된 분석 결과가 없어 공시 원문만 제공합니다.",
+    badge: "원문 제공",
+    title: "AI 해설은 아직 준비되지 않았습니다.",
+    description: "공시 원문과 제출 문서는 바로 확인할 수 있습니다. 검증이 끝난 해설만 추가로 표시합니다.",
   },
   PENDING: {
-    badge: "분석 대기",
-    title: "분석 작업이 대기열에 있습니다.",
-    description: "아직 완료된 결과가 없으며, 완료되기 전에는 분석 내용을 표시하지 않습니다.",
+    badge: "준비 예정",
+    title: "AI 해설을 준비하고 있습니다.",
+    description: "공시 원문과 제출 문서는 먼저 확인할 수 있으며, 해설은 검증이 끝난 뒤 표시합니다.",
   },
   PROCESSING: {
-    badge: "분석 중",
-    title: "공시 원문을 분석하고 있습니다.",
-    description: "현재 실행 중인 실제 작업이 끝나면 저장된 결과를 표시합니다.",
+    badge: "해설 작성 중",
+    title: "공시 내용을 확인하고 있습니다.",
+    description: "공시 원문은 정상적으로 이용할 수 있습니다. AI 해설은 검증을 마치는 대로 표시합니다.",
   },
   FAILED: {
-    badge: "분석 실패",
-    title: "최근 분석 작업을 완료하지 못했습니다.",
-    description: "검증되지 않은 내용을 대신 표시하지 않습니다. OpenDART 원문을 확인해 주세요.",
+    badge: "준비 지연",
+    title: "AI 해설 준비가 지연되고 있습니다.",
+    description: "공시 데이터의 오류가 아닙니다. 원문과 제출 문서는 정상적으로 확인할 수 있으며, 검증되지 않은 해설은 표시하지 않습니다.",
   },
 } as const;
 

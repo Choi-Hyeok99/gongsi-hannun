@@ -176,6 +176,9 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .watchlist-alert-card__company div { min-width: 0; }
 .watchlist-alert-card__company strong { font-size: 18px; }
 .watchlist-alert-card__company p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.watchlist-alert-card__title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.alert-status-badge { padding: 3px 7px; border-radius: 999px; color: #1056bd; background: #e8f2ff; font-size: 11px; font-weight: 900; }
+.alert-status-badge--off { color: var(--muted); background: #eef0f3; }
 .alert-preference-form { display: grid; grid-template-columns: minmax(150px, 0.65fr) minmax(190px, 1fr) auto; gap: 10px; align-items: flex-end; }
 .alert-preference-form > label { display: grid; gap: 6px; color: #344054; font-size: 13px; font-weight: 800; }
 .alert-preference-form select { min-width: 0; min-height: 42px; padding: 7px 34px 7px 10px; border: 1px solid #c8d2df; border-radius: 10px; background: white; }
@@ -188,6 +191,7 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .alert-event-types { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; margin-top: 12px; }
 .alert-event-types label { display: flex; align-items: center; gap: 7px; color: #475467; font-size: 12px; }
 .alert-preference-form details small { display: block; margin-top: 9px; color: var(--muted); }
+.alert-preference-form__hint { grid-column: 1 / -1; color: var(--muted); line-height: 1.5; }
 .alert-disclaimer { margin: -18px 0 26px; padding: 12px 14px; border: 1px solid #f1d38a; border-radius: 11px; color: #7a4c00; background: #fffbea; font-size: 13px; }
 .detail-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr); gap: 18px; }
 .info-card { padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: 0 7px 24px rgba(31, 49, 77, 0.05); }
@@ -296,6 +300,18 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 .push-settings__message, .push-settings > small { grid-column: 1 / -1; }
 .push-settings__message { color: var(--primary) !important; font-weight: 750; }
 .push-settings > small { color: var(--muted); }
+.notification-overview { display: grid; gap: 12px; margin-bottom: 28px; }
+.notification-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.notification-stats div { padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.notification-stats dt { color: var(--muted); font-size: 12px; font-weight: 800; }
+.notification-stats dd { margin: 4px 0 0; color: var(--text); font-size: 24px; font-weight: 900; }
+.notification-preference-link { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.notification-preference-link p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.notification-preference-link .secondary-button { display: inline-flex; flex: 0 0 auto; align-items: center; text-decoration: none; }
+.notification-filters { display: flex; gap: 7px; margin: -8px 0 18px; overflow-x: auto; padding-bottom: 3px; }
+.notification-filters a { display: inline-flex; min-height: 36px; flex: 0 0 auto; align-items: center; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); background: var(--surface); font-size: 13px; font-weight: 800; }
+.notification-filters a[aria-current="page"] { color: white; border-color: var(--primary-fill); background: var(--primary-fill); }
+.scroll-target { scroll-margin-top: 96px; }
 .event-type-badge { padding: 2px 7px; border-radius: 999px; color: #1056bd !important; background: #e8f2ff; font-size: 11px; font-weight: 800; }
 .disclosure-detail { max-width: 920px; padding: 34px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
 .disclosure-detail__heading { padding-bottom: 26px; border-bottom: 1px solid var(--border); }
@@ -593,6 +609,8 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
 :root[data-theme="dark"] .notification-card__reason,
 :root[data-theme="dark"] .price-empty strong { color: var(--text-strong-muted); }
 :root[data-theme="dark"] .push-settings { border-color: #315681; background: var(--surface-soft); }
+:root[data-theme="dark"] .notification-stats div,
+:root[data-theme="dark"] .notification-preference-link { background: var(--surface); }
 :root[data-theme="dark"] .price-chart__source { color: var(--text-strong-muted); background: #263245; }
 :root[data-theme="dark"] .price-chart__line--down { stroke: #69a7ff; }
 :root[data-theme="dark"] .price-change--down { color: #69a7ff; }
@@ -658,6 +676,7 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   .watchlist-alert-card { grid-template-columns: 1fr; gap: 18px; padding: 18px; }
   .alert-preference-form { grid-template-columns: 1fr; align-items: stretch; }
   .alert-preference-form details { grid-column: auto; }
+  .alert-preference-form__hint { grid-column: auto; }
   .alert-event-types { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .notification-intro { align-items: flex-start; flex-direction: column; }
   .notification-intro form, .notification-intro button { width: 100%; }
@@ -668,6 +687,11 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   .push-settings { grid-template-columns: 1fr; padding: 16px; }
   .push-settings > button, .push-settings__status { width: 100%; min-width: 0; grid-column: 1; grid-row: auto; }
   .push-settings__status { text-align: left; }
+  .notification-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .notification-stats div { padding: 12px; }
+  .notification-stats dd { font-size: 20px; }
+  .notification-preference-link { align-items: stretch; flex-direction: column; }
+  .notification-preference-link .secondary-button { justify-content: center; }
   .company-avatar--hero { width: 60px; height: 60px; border-radius: 18px; }
   .company-facts div { grid-template-columns: 86px minmax(0, 1fr); gap: 12px; }
   .disclosure-card { grid-template-columns: 1fr auto; gap: 8px 12px; padding: 16px; }

@@ -5,6 +5,7 @@ import {
 } from "@/domain/disclosure-classification";
 
 export const DEFAULT_ALERT_MINIMUM_SCORE = 70;
+export const BROAD_ALERT_MINIMUM_SCORE = 60;
 export const STRICT_ALERT_MINIMUM_SCORE = 85;
 export const DEFAULT_ALERT_EVENT_TYPES = DISCLOSURE_EVENT_TYPES.filter((eventType) => eventType !== "OTHER");
 
@@ -29,6 +30,21 @@ export type NotificationCenterItem = Readonly<{
   readAt: string | null;
 }>;
 
+export type NotificationView = "all" | "unread" | "critical";
+
+export function parseNotificationView(value: string | undefined): NotificationView {
+  return value === "unread" || value === "critical" ? value : "all";
+}
+
+export function filterNotifications(
+  notifications: readonly NotificationCenterItem[],
+  view: NotificationView,
+): readonly NotificationCenterItem[] {
+  if (view === "unread") return notifications.filter((notification) => !notification.readAt);
+  if (view === "critical") return notifications.filter((notification) => notification.importanceScore >= STRICT_ALERT_MINIMUM_SCORE);
+  return notifications;
+}
+
 export interface AlertPreferenceRepository {
   ensureDefault(userId: string, companyId: string): Promise<void>;
   findByCompanyIds(userId: string, companyIds: readonly string[]): Promise<ReadonlyMap<string, AlertPreference>>;
@@ -49,7 +65,7 @@ export function parseAlertPreference(formData: FormData): AlertPreference | null
   const rawEventTypes = formData.getAll("eventTypes");
 
   if (typeof companyId !== "string" || !/^[0-9a-f-]{36}$/i.test(companyId)) return null;
-  if (![DEFAULT_ALERT_MINIMUM_SCORE, STRICT_ALERT_MINIMUM_SCORE].includes(minimumImportanceScore)) return null;
+  if (![BROAD_ALERT_MINIMUM_SCORE, DEFAULT_ALERT_MINIMUM_SCORE, STRICT_ALERT_MINIMUM_SCORE].includes(minimumImportanceScore)) return null;
   if (!rawEventTypes.every((value) => typeof value === "string" && isDisclosureEventType(value))) return null;
 
   return {
