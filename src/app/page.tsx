@@ -10,7 +10,7 @@ import { createCompanyRepository } from "@/data/supabase-company-repository";
 import { createDailyPriceQueryRepository } from "@/data/supabase-daily-price-query-repository";
 import { createHomeStatusRepository } from "@/data/supabase-home-status-repository";
 import type { DailyPriceSnapshot } from "@/domain/daily-price";
-import { browseCompaniesPage } from "@/server/company-use-cases";
+import { listFeaturedCompanies } from "@/server/company-use-cases";
 import { getDailyPriceSnapshotsOrEmpty } from "@/server/daily-price-use-cases";
 import { listLatestDisclosures } from "@/server/disclosure-use-cases";
 import { getHomeOperationalStatus } from "@/server/home-status-use-cases";
@@ -35,8 +35,8 @@ export default async function HomePage() {
       .then((items) => ({ items, failed: false as const }))
       .catch(() => ({ items: [], failed: true as const })),
     Promise.resolve()
-      .then(() => browseCompaniesPage(createCompanyRepository(), "", "", "1", 8))
-      .then((result) => ({ companies: result.companies, failed: false as const }))
+      .then(() => listFeaturedCompanies(createCompanyRepository()))
+      .then((companies) => ({ companies, failed: false as const }))
       .catch(() => ({ companies: [], failed: true as const })),
     getHomeOperationalStatus(createHomeStatusRepository),
   ]);
@@ -69,7 +69,7 @@ export default async function HomePage() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">빠른 탐색</p>
-              <h2 id="featured-heading">상장기업 둘러보기</h2>
+              <h2 id="featured-heading">대표 기업 둘러보기</h2>
             </div>
             <Link className="text-link" href="/search">
               더 많은 기업 보기
@@ -94,8 +94,8 @@ export default async function HomePage() {
             ))}
           </div> : (
             <div className="empty-state">
-              <strong>{companyResult.failed ? "상장기업 목록을 불러오지 못했습니다." : "표시할 활성 상장기업이 없습니다."}</strong>
-              <p>{companyResult.failed ? "연결 상태를 확인한 뒤 기업 검색에서 다시 시도해 주세요." : "현재 데이터베이스에 활성 상태로 분류된 상장기업이 없습니다."}</p>
+              <strong>{companyResult.failed ? "대표 기업을 불러오지 못했습니다." : "표시할 대표 기업이 없습니다."}</strong>
+              <p>{companyResult.failed ? "연결 상태를 확인한 뒤 기업 검색에서 다시 시도해 주세요." : "선정한 기업의 최신 정보를 아직 확인하지 못했습니다."}</p>
               <Link className="primary-link" href="/search">기업 검색으로 이동</Link>
             </div>
           )}

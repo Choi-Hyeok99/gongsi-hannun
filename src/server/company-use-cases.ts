@@ -18,6 +18,9 @@ export type PublicCompanyPage = Readonly<{
   totalPages: number;
 }>;
 
+// Editorial quick links only. Company names, classifications, and prices always come from live repositories.
+const FEATURED_STOCK_CODES = ["005930", "000660", "373220", "005380", "000270", "035420", "035720", "005490"] as const;
+
 function toPublicCompany(company: Company): PublicCompany {
   return {
     stockCode: company.stockCode,
@@ -75,4 +78,11 @@ export async function getCompany(
   if (!/^[0-9]{6}$/.test(stockCode)) return null;
   const company = await repository.findByStockCode(stockCode);
   return company ? toPublicCompany(company) : null;
+}
+
+export async function listFeaturedCompanies(repository: CompanyRepository): Promise<readonly PublicCompany[]> {
+  const companies = await Promise.all(FEATURED_STOCK_CODES.map((code) => repository.findByStockCode(code)));
+  return companies
+    .filter((company): company is Company => company !== null && (company.market === "KOSPI" || company.market === "KOSDAQ"))
+    .map(toPublicCompany);
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Company, CompanyRepository } from "@/domain/company";
 import { InvalidInputError } from "@/domain/errors";
-import { browseCompaniesPage, getCompany, searchCompanies } from "@/server/company-use-cases";
+import { browseCompaniesPage, getCompany, listFeaturedCompanies, searchCompanies } from "@/server/company-use-cases";
 
 const sample: Company = { id: "company-1", dartCorpCode: "00126380", stockCode: "005930", nameKo: "삼성전자", market: "KOSPI", sector: "반도체", industryCategory: "SEMICONDUCTOR" };
 
@@ -69,5 +69,16 @@ describe("getCompany", () => {
     const findByStockCode = vi.spyOn(repository, "findByStockCode");
     await expect(getCompany(repository, "invalid")).resolves.toBeNull();
     expect(findByStockCode).not.toHaveBeenCalled();
+  });
+});
+
+describe("listFeaturedCompanies", () => {
+  it("uses live company records for curated quick links without inventing missing companies", async () => {
+    const repository = new FixtureCompanyRepository();
+    const find = vi.spyOn(repository, "findByStockCode");
+
+    await expect(listFeaturedCompanies(repository)).resolves.toEqual([expect.objectContaining({ stockCode: "005930", name: "삼성전자" })]);
+    expect(find).toHaveBeenCalledTimes(8);
+    expect(find).toHaveBeenCalledWith("000660");
   });
 });
