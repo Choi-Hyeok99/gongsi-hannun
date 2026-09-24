@@ -78,7 +78,17 @@ jobs:
           ].join("\n"));
           NODE
 
+      - name: Collect KRX daily prices
+        id: prices
+        continue-on-error: true
+        run: >-
+          npx tsx src/jobs/collector/run-daily-price-sync.ts
+          --from "${{ steps.dates.outputs.price_from }}"
+          --to "${{ steps.dates.outputs.collection_date }}"
+
       - name: Collect OpenDART disclosures
+        id: disclosures
+        continue-on-error: true
         run: >-
           npx tsx src/jobs/collector/run-disclosure-sync.ts
           "${{ steps.dates.outputs.dart_from }}"
@@ -88,6 +98,7 @@ jobs:
         run: npx tsx src/jobs/collector/run-event-materialization.ts
 
       - name: Collect OpenDART filing documents
+        continue-on-error: true
         run: npx tsx src/jobs/collector/run-disclosure-document-sync.ts
 
       - name: Generate prior-day watchlist alerts
@@ -108,16 +119,15 @@ jobs:
           WEB_PUSH_VAPID_SUBJECT: mailto:admin@gongsihannun.com
         run: npx tsx src/jobs/collector/run-web-push-delivery.ts
 
-      - name: Collect KRX daily prices
-        run: >-
-          npx tsx src/jobs/collector/run-daily-price-sync.ts
-          --from "${{ steps.dates.outputs.price_from }}"
-          --to "${{ steps.dates.outputs.collection_date }}"
-
       - name: Generate AI disclosure summaries
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '20 9 * * 1-5'
         continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: gemini-3.5-flash-lite
           AI_ANALYSIS_LIMIT: "10"
         run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts
+
+      - name: Report source collection failures
+        if: always() && (steps.prices.outcome == 'failure' || steps.disclosures.outcome == 'failure')
+        run: exit 1

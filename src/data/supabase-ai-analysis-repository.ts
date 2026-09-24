@@ -26,6 +26,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       .from("events")
       .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,title,document_kind,sequence_no,content_text,content_hash))")
       .eq("visibility", "PUBLIC")
+      .gte("rule_importance_score", 85)
       .order("occurred_on", { ascending: false })
       .limit(Math.max(limit * 4, limit));
     if (error) throw new DataAccessError("AI 분석 대상 공시를 조회하지 못했습니다.");
@@ -38,8 +39,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
     for (const row of rows) {
       const eventId = String(row.id);
       const state = existing.get(eventId);
-      if (state && state.status !== "FAILED") continue;
-      if (state && state.attemptCount >= 3) continue;
+      if (state && !isRetryableAnalysisState(state)) continue;
       const eventType = String(row.event_type);
       if (!isDisclosureEventType(eventType)) continue;
       const disclosure = firstObject(row.source_disclosures);
@@ -95,11 +95,15 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
 
     const { data: existing, error: readError } = await this.client
       .from("ai_analyses")
-      .select("id,status,attempt_count")
+      .select("id,status,attempt_count,error_code")
       .eq("event_id", candidate.eventId)
       .eq("analysis_version", analysisVersion)
       .maybeSingle();
-    if (readError || !existing || existing.status !== "FAILED" || Number(existing.attempt_count) >= 3) return false;
+    if (readError || !existing || !isRetryableAnalysisState({
+      status: String(existing.status),
+      attemptCount: Number(existing.attempt_count),
+      errorCode: String(existing.error_code ?? ""),
+    })) return false;
     const { data: updated, error: updateError } = await this.client
       .from("ai_analyses")
       .update({ ...row, attempt_count: Number(existing.attempt_count) + 1 })
@@ -163,13 +167,21 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   }
 
   private async findExistingStates(eventIds: readonly string[], analysisVersion: string) {
-    const states = new Map<string, Readonly<{ status: string; attemptCount: number }>>();
+    const states = new Map<string, Readonly<{ status: string; attemptCount: number; errorCode: string }>>();
     if (eventIds.length === 0) return states;
-    const { data, error } = await this.client.from("ai_analyses").select("event_id,status,attempt_count").eq("analysis_version", analysisVersion).in("event_id", eventIds);
+    const { data, error } = await this.client.from("ai_analyses").select("event_id,status,attempt_count,error_code").eq("analysis_version", analysisVersion).in("event_id", eventIds);
     if (error) throw new DataAccessError("기존 AI 분석 상태를 조회하지 못했습니다.");
-    for (const row of data ?? []) states.set(String(row.event_id), { status: String(row.status), attemptCount: Number(row.attempt_count) });
+    for (const row of data ?? []) states.set(String(row.event_id), {
+      status: String(row.status),
+      attemptCount: Number(row.attempt_count),
+      errorCode: String(row.error_code ?? ""),
+    });
     return states;
   }
+}
+
+function isRetryableAnalysisState(state: Readonly<{ status: string; attemptCount: number; errorCode: string }>): boolean {
+  return state.status === "FAILED" && state.attemptCount < 2 && state.errorCode !== "AI_INVALID_RESPONSE";
 }
 
 export function createSupabaseAiAnalysisRepository(options: RepositoryOptions): AiAnalysisRepository {

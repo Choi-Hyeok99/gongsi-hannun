@@ -46,5 +46,14 @@ describe("OpenDartClient", () => {
   it("classifies rate limits", async () => {
     const fetcher = vi.fn(async () => new Response("", { status: 429 }));
     await expect(new OpenDartClient({ apiKey: "secret-key", fetcher }).listDisclosures(query)).rejects.toEqual(expect.objectContaining<Partial<ExternalServiceError>>({ code: "RATE_LIMITED" }));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a temporary server failure once", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response("", { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "013", message: "조회된 데이터가 없습니다." }), { status: 200 }));
+    await expect(new OpenDartClient({ apiKey: "secret-key", fetcher }).listDisclosures(query)).resolves.toEqual([]);
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });
