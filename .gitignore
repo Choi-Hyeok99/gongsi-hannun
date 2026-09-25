@@ -11,3 +11,4 @@ coverage/
 *.tsbuildinfo
 docs/local-work-log.md
 preview-server*.log
+outputs/ai-provider-comparison-*

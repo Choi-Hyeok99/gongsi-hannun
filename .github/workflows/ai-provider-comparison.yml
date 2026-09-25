@@ -1,0 +1,52 @@
+name: Compare AI summary providers
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Number of real disclosures to compare (1-30)"
+        required: true
+        default: "30"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_MODEL: gemini-3.5-flash-lite
+      OPENAI_MODEL: gpt-6-luna
+      AI_COMPARISON_LIMIT: ${{ inputs.limit }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compare providers without writing summaries
+        run: pnpm compare:ai-providers
+
+      - name: Upload comparison report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-provider-comparison
+          path: outputs/ai-provider-comparison-*
+          if-no-files-found: warn
+          retention-days: 14

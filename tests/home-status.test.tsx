@@ -114,6 +114,6 @@ describe("home status presentation", () => {
     expect(home).not.toContain('name: "삼성전자"');
     expect(home).not.toContain('stockCode: "005930"');
     expect(home).toContain("operationalStatus.activeCompanyCount");
-    expect(home).toContain("browseCompaniesPage");
+    expect(home).toContain("listFeaturedCompanies");
   });
 });

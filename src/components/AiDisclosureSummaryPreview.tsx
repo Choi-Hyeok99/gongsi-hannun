@@ -2,6 +2,7 @@ import Link from "next/link";
 import React from "react";
 import type { AiDisclosureSummary, AiDisclosureSummaryState } from "@/domain/ai-disclosure-summary";
 import type { DisclosureFactKind, VerifiedDisclosureFact } from "@/domain/ai-disclosure-facts";
+import type { DisclosureDocumentCollectionStatus } from "@/domain/disclosure-document";
 
 type Props = Readonly<{
   companyName: string;
@@ -11,6 +12,7 @@ type Props = Readonly<{
   originalUrl: string;
   receiptNumber: string;
   state: AiDisclosureSummaryState;
+  documentStatus?: DisclosureDocumentCollectionStatus;
 }>;
 
 export function AiDisclosureSummaryPreview(props: Props) {
@@ -153,7 +155,10 @@ function getFactKindLabel(kind: DisclosureFactKind): string {
 }
 
 function AiSummaryStatus(props: Props) {
-  const content = STATUS_CONTENT[props.state.status === "READY" ? "NOT_GENERATED" : props.state.status];
+  const status = props.state.status === "READY" ? "NOT_GENERATED" : props.state.status;
+  const content = status === "NOT_GENERATED" && props.documentStatus && props.documentStatus !== "READY"
+    ? getDocumentPendingContent(props.documentStatus)
+    : STATUS_CONTENT[status];
   const updatedAt = "updatedAt" in props.state ? props.state.updatedAt : null;
   return (
     <section className="ai-summary-preview" aria-labelledby="ai-summary-heading">
@@ -174,8 +179,8 @@ function AiSummaryStatus(props: Props) {
 const STATUS_CONTENT = {
   NOT_GENERATED: {
     badge: "원문 제공",
-    title: "AI 해설은 아직 준비되지 않았습니다.",
-    description: "공시 원문과 제출 문서는 바로 확인할 수 있습니다. 검증이 끝난 해설만 추가로 표시합니다.",
+    title: "이 공시는 AI 해설 대상이 아닐 수 있습니다.",
+    description: "현재는 중요도가 높은 공시부터 제한적으로 해설합니다. 아래 제출 문서와 OpenDART 원문은 바로 확인할 수 있습니다.",
   },
   PENDING: {
     badge: "준비 예정",
@@ -193,6 +198,24 @@ const STATUS_CONTENT = {
     description: "공시 데이터의 오류가 아닙니다. 원문과 제출 문서는 정상적으로 확인할 수 있으며, 검증되지 않은 해설은 표시하지 않습니다.",
   },
 } as const;
+
+function getDocumentPendingContent(status: DisclosureDocumentCollectionStatus) {
+  if (status === "UNAVAILABLE") return {
+    badge: "원문 미제공",
+    title: "AI 해설에 필요한 문서를 확인할 수 없습니다.",
+    description: "OpenDART 원문에서 공시 내용을 직접 확인해 주세요.",
+  } as const;
+  if (status === "FAILED") return {
+    badge: "원문 수집 지연",
+    title: "제출 문서 수집이 지연되고 있습니다.",
+    description: "AI 해설은 원문이 수집된 뒤 중요 공시부터 생성됩니다. 현재는 OpenDART 원문을 확인해 주세요.",
+  } as const;
+  return {
+    badge: "원문 수집 중",
+    title: "AI 해설에 필요한 제출 문서를 수집하고 있습니다.",
+    description: "원문이 준비되면 중요 공시부터 해설합니다. 현재는 OpenDART 원문을 확인해 주세요.",
+  } as const;
+}
 
 function formatKoreanTimestamp(value: string): string {
   const date = new Date(value);

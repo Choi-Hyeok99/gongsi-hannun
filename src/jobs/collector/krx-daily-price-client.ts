@@ -65,6 +65,22 @@ export class KrxDailyPriceClient implements DailyPriceSource {
     endpoint: (typeof MARKET_ENDPOINTS)[number],
     krxDate: string,
   ): Promise<readonly z.infer<typeof rowSchema>[]> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.fetchMarketOnce(endpoint, krxDate);
+      } catch (error) {
+        if (attempt === 1 || !(error instanceof ExternalServiceError) ||
+          (error.code !== "TIMEOUT" && error.code !== "UNAVAILABLE")) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+      }
+    }
+    throw new ExternalServiceError("UNAVAILABLE", "KRX API 통신에 실패했습니다.");
+  }
+
+  private async fetchMarketOnce(
+    endpoint: (typeof MARKET_ENDPOINTS)[number],
+    krxDate: string,
+  ): Promise<readonly z.infer<typeof rowSchema>[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {

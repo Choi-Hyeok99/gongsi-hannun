@@ -50,11 +50,26 @@ export class OpenDartClient implements DisclosureSource {
   }
 
   async fetchPage(query: DisclosureQuery): Promise<DisclosurePage> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.fetchPageOnce(query);
+      } catch (error) {
+        if (attempt === 1 || !(error instanceof ExternalServiceError) ||
+          (error.code !== "TIMEOUT" && error.code !== "UNAVAILABLE")) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+      }
+    }
+    throw new ExternalServiceError("UNAVAILABLE", "OpenDART 통신에 실패했습니다.");
+  }
+
+  private async fetchPageOnce(query: DisclosureQuery): Promise<DisclosurePage> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       const response = await this.fetcher(this.buildUrl(query), { signal: controller.signal, cache: "no-store" });
       if (response.status === 429) throw new ExternalServiceError("RATE_LIMITED", "OpenDART 요청 한도를 초과했습니다.");
+      if (response.status === 401 || response.status === 403) throw new ExternalServiceError("AUTHENTICATION_FAILED", "OpenDART 인증에 실패했습니다.");
+      if (response.status >= 400 && response.status < 500) throw new ExternalServiceError("INVALID_RESPONSE", "OpenDART 요청이 거부됐습니다.");
       if (!response.ok) throw new ExternalServiceError("UNAVAILABLE", "OpenDART를 일시적으로 사용할 수 없습니다.");
       const payload = responseSchema.safeParse(await readLimitedJson(response, this.maxResponseBytes));
       if (!payload.success) throw new ExternalServiceError("INVALID_RESPONSE", "OpenDART 응답 형식이 올바르지 않습니다.");

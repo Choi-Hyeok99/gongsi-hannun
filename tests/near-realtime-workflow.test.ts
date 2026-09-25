@@ -16,22 +16,19 @@ describe("near real-time disclosure workflow", () => {
     const alert = workflow.indexOf("run-disclosure-alert-generation.ts");
     const push = workflow.indexOf("run-web-push-delivery.ts");
     const document = workflow.indexOf("run-disclosure-document-sync.ts");
-    const analysis = workflow.indexOf("run-ai-disclosure-summary.ts");
 
     expect(disclosure).toBeGreaterThan(-1);
     expect(disclosure).toBeLessThan(event);
     expect(event).toBeLessThan(alert);
     expect(alert).toBeLessThan(push);
     expect(push).toBeLessThan(document);
-    expect(document).toBeLessThan(analysis);
+    expect(workflow).not.toContain("run-ai-disclosure-summary.ts");
     expect(workflow).not.toContain("run-daily-price-sync.ts");
   });
 
   it("caps expensive work and keeps optional enrichment from blocking collection", () => {
     expect(workflow).toContain('DISCLOSURE_DOCUMENT_SYNC_LIMIT: "20"');
-    expect(workflow).toContain('AI_ANALYSIS_LIMIT: "5"');
-    expect(workflow.match(/continue-on-error: true/g)).toHaveLength(3);
-    expect(workflow).toContain("GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}");
+    expect(workflow.match(/continue-on-error: true/g)).toHaveLength(2);
     expect(workflow).toContain("WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}");
   });
 });

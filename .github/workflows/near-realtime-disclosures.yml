@@ -94,11 +94,3 @@ jobs:
         env:
           DISCLOSURE_DOCUMENT_SYNC_LIMIT: "20"
         run: npx tsx src/jobs/collector/run-disclosure-document-sync.ts
-
-      - name: Generate AI summaries for ready filings
-        continue-on-error: true
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-3.5-flash-lite
-          AI_ANALYSIS_LIMIT: "5"
-        run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts

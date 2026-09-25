@@ -34,5 +34,5 @@ export interface DisclosureRepository {
   search(query: DisclosureSearch): Promise<DisclosureSearchResult>;
   findByReceiptNumber(receiptNumber: string): Promise<DisclosureSummary | null>;
   findByCompanyStockCode(stockCode: string, limit: number): Promise<readonly DisclosureSummary[]>;
-  findByDateRange(from: string, to: string, limit: number): Promise<readonly DisclosureSummary[]>;
+  findByDateRange(from: string, to: string, pageSize: number): Promise<readonly DisclosureSummary[]>;
 }
