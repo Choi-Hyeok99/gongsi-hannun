@@ -7,7 +7,7 @@ import type {
   CompanyIndustrySyncRepository,
   CompanyIndustrySyncTarget,
 } from "@/domain/company-industry-sync";
-import type { CompanyIndustryCategory } from "@/domain/company";
+import { isListedMarket, type CompanyIndustryCategory } from "@/domain/company";
 import { DataAccessError } from "@/domain/errors";
 
 type RepositoryOptions = Readonly<{
@@ -44,8 +44,7 @@ export class SupabaseCompanyIndustrySyncRepository implements CompanyIndustrySyn
     let request = this.client
       .from("companies")
       .select("id,dart_corp_code")
-      .eq("is_active", true)
-      .eq("is_listed", true)
+      .not("stock_code", "is", null)
       .is("industry_profile_synced_at", null)
       .or(`industry_profile_attempted_at.is.null,industry_profile_attempted_at.lt.${retryBefore}`)
       .order("id")
@@ -69,7 +68,12 @@ export class SupabaseCompanyIndustrySyncRepository implements CompanyIndustrySyn
       industry_profile_synced_at: now,
       industry_profile_error_code: null,
     };
-    if (profile) values.market = profile.market;
+    if (profile) {
+      const listed = isListedMarket(profile.market);
+      values.market = profile.market;
+      values.is_listed = listed;
+      values.is_active = listed;
+    }
     const { error } = await this.client.from("companies").update(values).eq("id", target.id);
     if (error) throw new DataAccessError("기업 업종 정보를 저장하지 못했습니다.");
   }
@@ -90,8 +94,7 @@ export class SupabaseCompanyIndustrySyncRepository implements CompanyIndustrySyn
     const { count, error } = await this.client
       .from("companies")
       .select("id", { count: "exact", head: true })
-      .eq("is_active", true)
-      .eq("is_listed", true)
+      .not("stock_code", "is", null)
       .is("industry_profile_synced_at", null);
     if (error) throw new DataAccessError("남은 업종 동기화 대상을 계산하지 못했습니다.");
     return count ?? 0;

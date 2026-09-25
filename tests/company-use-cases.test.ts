@@ -1,9 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Company, CompanyRepository } from "@/domain/company";
+import { isListedMarket, type Company, type CompanyRepository } from "@/domain/company";
 import { InvalidInputError } from "@/domain/errors";
 import { browseCompaniesPage, getCompany, listFeaturedCompanies, searchCompanies } from "@/server/company-use-cases";
 
 const sample: Company = { id: "company-1", dartCorpCode: "00126380", stockCode: "005930", nameKo: "삼성전자", market: "KOSPI", sector: "반도체", industryCategory: "SEMICONDUCTOR" };
+
+describe("isListedMarket", () => {
+  it.each(["KOSPI", "KOSDAQ", "KONEX"] as const)("accepts %s as an exchange market", (market) => {
+    expect(isListedMarket(market)).toBe(true);
+  });
+
+  it("rejects OpenDART's OTHER corporation class", () => {
+    expect(isListedMarket("OTHER")).toBe(false);
+  });
+});
 
 class FixtureCompanyRepository implements CompanyRepository {
   async search(query: string, _limit: number, category?: Company["industryCategory"]): Promise<readonly Company[]> {

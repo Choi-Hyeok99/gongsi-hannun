@@ -8,6 +8,13 @@ import { DataAccessError } from "@/domain/errors";
 
 const BATCH_SIZE = 500;
 
+type ExistingCompanyState = Readonly<{
+  dart_corp_code: string;
+  market: "KOSPI" | "KOSDAQ" | "KONEX" | "OTHER";
+  is_listed: boolean;
+  is_active: boolean;
+}>;
+
 type RepositoryOptions = Readonly<{
   supabaseUrl: string;
   supabaseSecretKey: string;
@@ -29,34 +36,43 @@ export class SupabaseCompanySyncRepository implements CompanySyncRepository {
   async upsertListedCompanies(
     companies: readonly ListedCompanyInput[],
   ): Promise<Readonly<{ createdCount: number; updatedCount: number }>> {
-    const existingCodes = new Set<string>();
+    const existingByCode = new Map<string, ExistingCompanyState>();
     for (const batch of batches(companies, BATCH_SIZE)) {
       const { data, error } = await this.client
         .from("companies")
-        .select("dart_corp_code")
+        .select("dart_corp_code,market,is_listed,is_active")
         .in("dart_corp_code", batch.map((company) => company.dartCorpCode));
       if (error) throw new DataAccessError("기존 기업 정보를 확인하지 못했습니다.");
-      for (const row of data ?? []) existingCodes.add(String(row.dart_corp_code));
+      for (const row of data ?? []) {
+        const existing = row as ExistingCompanyState;
+        existingByCode.set(existing.dart_corp_code, existing);
+      }
     }
 
     for (const batch of batches(companies, BATCH_SIZE)) {
-      const rows = batch.map((company) => ({
-        dart_corp_code: company.dartCorpCode,
-        stock_code: company.stockCode,
-        name_ko: company.nameKo,
-        name_en: company.nameEn,
-        market: "OTHER",
-        is_listed: true,
-        is_active: true,
-        source_updated_at: `${company.sourceUpdatedOn}T00:00:00+09:00`,
-      }));
+      const rows = batch.map((company) => {
+        const existing = existingByCode.get(company.dartCorpCode);
+        return {
+          dart_corp_code: company.dartCorpCode,
+          stock_code: company.stockCode,
+          name_ko: company.nameKo,
+          name_en: company.nameEn,
+          market: existing?.market ?? "OTHER",
+          // A stock code in corpCode.xml alone does not prove a current listing.
+          // New rows stay hidden until company.json verifies Y/K/N. Existing rows
+          // retain the result of their latest verified company overview.
+          is_listed: existing?.is_listed ?? false,
+          is_active: existing?.is_active ?? false,
+          source_updated_at: `${company.sourceUpdatedOn}T00:00:00+09:00`,
+        };
+      });
       const { error } = await this.client
         .from("companies")
         .upsert(rows, { onConflict: "dart_corp_code" });
       if (error) throw new DataAccessError("기업 정보를 저장하지 못했습니다.");
     }
 
-    const updatedCount = companies.filter((company) => existingCodes.has(company.dartCorpCode)).length;
+    const updatedCount = companies.filter((company) => existingByCode.has(company.dartCorpCode)).length;
     return { createdCount: companies.length - updatedCount, updatedCount };
   }
 
