@@ -80,12 +80,17 @@ describe("OpenAiDisclosureSummaryClient", () => {
     await expect(client.summarize(candidate)).rejects.toThrow(code);
   });
 
-  it("distinguishes exhausted account quota from a temporary rate limit", async () => {
+  it.each([
+    [{ code: "credit_balance_exhausted" }, "AI_QUOTA_EXHAUSTED"],
+    [{ code: "project_spend_limit_exceeded" }, "AI_QUOTA_EXHAUSTED"],
+    [{ type: "insufficient_quota" }, "AI_QUOTA_EXHAUSTED"],
+    [{ code: "slow_down", type: "rate_limit_error" }, "AI_RATE_LIMITED"],
+  ])("classifies quota and temporary 429 errors without exposing details", async (upstreamError, expected) => {
     const client = new OpenAiDisclosureSummaryClient({
       apiKey: "openai-secret-value-123456",
-      fetchImpl: vi.fn(async () => new Response(JSON.stringify({ error: { code: "insufficient_quota", message: "private detail" } }), { status: 429 })),
+      fetchImpl: vi.fn(async () => new Response(JSON.stringify({ error: { ...upstreamError, message: "private detail" } }), { status: 429 })),
     });
-    await expect(client.summarize(candidate)).rejects.toThrow("AI_QUOTA_EXHAUSTED");
+    await expect(client.summarize(candidate)).rejects.toThrow(expected);
   });
 
   it("uses the same capped source document contract as Gemini", async () => {

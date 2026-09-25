@@ -113,18 +113,29 @@ async function classifyHttpError(response: Response): Promise<string> {
   if (status === 404) return "AI_MODEL_NOT_FOUND";
   if (status === 408) return "AI_TIMEOUT";
   if (status === 429) {
-    const code = await readOpenAiErrorCode(response);
-    return code === "insufficient_quota" ? "AI_QUOTA_EXHAUSTED" : "AI_RATE_LIMITED";
+    const error = await readOpenAiError(response);
+    const quotaCodes = new Set([
+      "credit_balance_exhausted",
+      "organization_spend_limit_exceeded",
+      "project_spend_limit_exceeded",
+      "organization_usage_limit_exceeded",
+    ]);
+    return error.type === "insufficient_quota" || (error.code !== null && quotaCodes.has(error.code))
+      ? "AI_QUOTA_EXHAUSTED"
+      : "AI_RATE_LIMITED";
   }
   if (status >= 500) return "AI_PROVIDER_UNAVAILABLE";
   return "AI_UPSTREAM_ERROR";
 }
 
-async function readOpenAiErrorCode(response: Response): Promise<string | null> {
+async function readOpenAiError(response: Response): Promise<Readonly<{ code: string | null; type: string | null }>> {
   try {
-    const body = await response.json() as Readonly<{ error?: Readonly<{ code?: unknown }> }>;
-    return typeof body.error?.code === "string" ? body.error.code : null;
+    const body = await response.json() as Readonly<{ error?: Readonly<{ code?: unknown; type?: unknown }> }>;
+    return {
+      code: typeof body.error?.code === "string" ? body.error.code : null,
+      type: typeof body.error?.type === "string" ? body.error.type : null,
+    };
   } catch {
-    return null;
+    return { code: null, type: null };
   }
 }
