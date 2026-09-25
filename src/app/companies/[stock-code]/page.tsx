@@ -16,6 +16,7 @@ import { listCompanyDisclosures } from "@/server/disclosure-use-cases";
 import { getDailyPriceSnapshotOrEmpty } from "@/server/daily-price-use-cases";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { getSavedState } from "@/server/watchlist-use-cases";
+import { hasRequiredPolicyConsents } from "@/server/consent";
 
 export const dynamic = "force-dynamic";
 
@@ -60,9 +61,10 @@ export default async function CompanyPage({ params, searchParams }: Props) {
     createSupabaseServerClient(),
   ]);
   const { data: { user } } = await supabase.auth.getUser();
-  const watchlistCompany = user ? await createWatchlistCompanyReader().findByStockCode(stockCode) : null;
-  const isSaved = user && watchlistCompany
-    ? await getSavedState(new SupabaseWatchlistRepository(supabase), user.id, watchlistCompany.id)
+  const consentedUser = user && await hasRequiredPolicyConsents(supabase, user.id) ? user : null;
+  const watchlistCompany = consentedUser ? await createWatchlistCompanyReader().findByStockCode(stockCode) : null;
+  const isSaved = consentedUser && watchlistCompany
+    ? await getSavedState(new SupabaseWatchlistRepository(supabase), consentedUser.id, watchlistCompany.id)
     : false;
   const market = company.market === "OTHER" ? "시장 미분류" : company.market;
   const industryLabel = company.industryCategory === "UNCLASSIFIED" ? "업종 미분류" : company.industryCategoryLabel ?? "업종 미분류";
@@ -84,7 +86,7 @@ export default async function CompanyPage({ params, searchParams }: Props) {
             </span>
           </div>
           <div className="company-hero__action">
-            <WatchlistButton stockCode={stockCode} isAuthenticated={Boolean(user)} isSaved={isSaved} />
+            <WatchlistButton stockCode={stockCode} isAuthenticated={Boolean(consentedUser)} isSaved={isSaved} />
           </div>
         </section>
 

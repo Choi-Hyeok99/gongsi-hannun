@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { buildTrustedSiteUrl, safeRedirectPath } from "@/domain/auth";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { readSiteUrl } from "@/server/supabase/config";
+import { hasRequiredPolicyConsents } from "@/server/consent";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -11,7 +12,14 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(buildTrustedSiteUrl(readSiteUrl(), next));
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && !await hasRequiredPolicyConsents(supabase, user.id)) {
+        const consentPath = `/consent?next=${encodeURIComponent(next)}`;
+        return NextResponse.redirect(buildTrustedSiteUrl(readSiteUrl(), consentPath));
+      }
+      return NextResponse.redirect(buildTrustedSiteUrl(readSiteUrl(), next));
+    }
   }
 
   const loginUrl = new URL("/login", readSiteUrl());

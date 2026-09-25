@@ -9,6 +9,8 @@ import {
   parseSignUpForm,
   safeRedirectPath,
 } from "@/domain/auth";
+import { REQUIRED_POLICY_VERSIONS } from "@/domain/consent";
+import { hasRequiredPolicyConsents } from "@/server/consent";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { readSiteUrl } from "@/server/supabase/config";
 
@@ -24,7 +26,12 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) redirectWithMessage("/login", "error", "이메일 또는 비밀번호를 확인해 주세요.");
 
-  redirect(safeRedirectPath(formData.get("next")?.toString() ?? null));
+  const next = safeRedirectPath(formData.get("next")?.toString() ?? null);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !await hasRequiredPolicyConsents(supabase, user.id)) {
+    redirect(`/consent?next=${encodeURIComponent(next)}`);
+  }
+  redirect(next);
 }
 
 export async function loginWithKakao(formData: FormData) {
@@ -52,7 +59,13 @@ export async function signUp(formData: FormData) {
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { emailRedirectTo: `${readSiteUrl()}/auth/callback` },
+    options: {
+      emailRedirectTo: `${readSiteUrl()}/auth/callback`,
+      data: {
+        terms_accepted_version: REQUIRED_POLICY_VERSIONS.TERMS,
+        privacy_accepted_version: REQUIRED_POLICY_VERSIONS.PRIVACY,
+      },
+    },
   });
   if (error) redirectWithMessage("/signup", "error", "회원가입을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
 

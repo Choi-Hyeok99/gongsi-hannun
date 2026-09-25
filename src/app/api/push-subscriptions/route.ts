@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { hasRequiredPolicyConsents } from "@/server/consent";
+
+async function authorizedUser() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { response: NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 }) } as const;
+  if (!await hasRequiredPolicyConsents(supabase, user.id)) {
+    return { response: NextResponse.json({ error: "이용약관과 개인정보처리방침에 동의해 주세요." }, { status: 403 }) } as const;
+  }
+  return { supabase } as const;
+}
 
 const subscriptionSchema = z.object({
   endpoint: z.url().max(4096),
@@ -13,16 +24,15 @@ const subscriptionSchema = z.object({
 const deleteSchema = z.object({ endpoint: z.url().max(4096) });
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  const access = await authorizedUser();
+  if ("response" in access) return access.response;
   return NextResponse.json({ publicKey: process.env.WEB_PUSH_VAPID_PUBLIC_KEY ?? "" });
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  const access = await authorizedUser();
+  if ("response" in access) return access.response;
+  const supabase = access.supabase;
 
   const parsed = subscriptionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "올바르지 않은 알림 구독 정보입니다." }, { status: 400 });
@@ -38,9 +48,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  const access = await authorizedUser();
+  if ("response" in access) return access.response;
+  const supabase = access.supabase;
 
   const parsed = deleteSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "올바르지 않은 알림 구독 정보입니다." }, { status: 400 });
