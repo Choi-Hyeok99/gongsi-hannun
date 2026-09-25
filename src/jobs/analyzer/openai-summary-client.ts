@@ -3,6 +3,7 @@ import type {
   AiDisclosureSummaryProvider,
   GeneratedAiDisclosureSummaryCandidate,
 } from "@/domain/ai-disclosure-summary";
+import type { AiProviderUsage } from "./gemini-summary-client";
 import {
   buildDisclosureSummaryPrompt,
   DISCLOSURE_SUMMARY_JSON_SCHEMA,
@@ -11,17 +12,16 @@ import {
   parseDisclosureSummary,
 } from "./disclosure-summary-contract";
 
-const DEFAULT_MODEL = "gemini-3.5-flash-lite";
+const DEFAULT_MODEL = "gpt-6-luna";
 const REQUEST_TIMEOUT_MS = 45_000;
 
-type GeminiResponse = Readonly<{
-  candidates?: readonly Readonly<{
-    content?: Readonly<{ parts?: readonly Readonly<{ text?: string }>[] }>;
+type OpenAiResponse = Readonly<{
+  output?: readonly Readonly<{
+    type?: string;
+    content?: readonly Readonly<{ type?: string; text?: string }>[];
   }>[];
-  usageMetadata?: Readonly<{ promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number }>;
+  usage?: Readonly<{ input_tokens?: number; output_tokens?: number; total_tokens?: number }>;
 }>;
-
-export type AiProviderUsage = Readonly<{ inputTokens: number; outputTokens: number; totalTokens: number }>;
 
 type Options = Readonly<{
   apiKey: string;
@@ -31,8 +31,8 @@ type Options = Readonly<{
   onUsage?: (usage: AiProviderUsage) => void;
 }>;
 
-export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvider {
-  readonly providerName = "google";
+export class OpenAiDisclosureSummaryClient implements AiDisclosureSummaryProvider {
+  readonly providerName = "openai";
   readonly modelName: string;
   private readonly apiKey: string;
   private readonly fetchImpl: typeof fetch;
@@ -51,26 +51,31 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const response = await this.fetchImpl(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.modelName)}:generateContent`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
-          signal: controller.signal,
-          body: JSON.stringify(buildRequest(candidate)),
+      const response = await this.fetchImpl("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
         },
-      );
-      if (!response.ok) throw new Error(classifyHttpStatus(response.status));
-      const body = await response.json() as GeminiResponse;
-      if (body.usageMetadata) this.onUsage?.({
-        inputTokens: body.usageMetadata.promptTokenCount ?? 0,
-        outputTokens: body.usageMetadata.candidatesTokenCount ?? 0,
-        totalTokens: body.usageMetadata.totalTokenCount ?? 0,
+        signal: controller.signal,
+        body: JSON.stringify(buildRequest(candidate, this.modelName)),
       });
-      const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
+      if (!response.ok) throw new Error(classifyHttpStatus(response.status));
+      const body = await response.json() as OpenAiResponse;
+      if (body.usage) this.onUsage?.({
+        inputTokens: body.usage.input_tokens ?? 0,
+        outputTokens: body.usage.output_tokens ?? 0,
+        totalTokens: body.usage.total_tokens ?? 0,
+      });
+      const text = body.output
+        ?.filter((item) => item.type === "message")
+        .flatMap((item) => item.content ?? [])
+        .filter((item) => item.type === "output_text")
+        .map((item) => item.text ?? "")
+        .join("")
+        .trim();
       if (!text) throw new Error("AI_INVALID_RESPONSE");
-      const parsedJson: unknown = JSON.parse(text);
-      return parseDisclosureSummary(parsedJson);
+      return parseDisclosureSummary(JSON.parse(text) as unknown);
     } catch (error) {
       if (error instanceof SyntaxError) throw new Error("AI_INVALID_RESPONSE");
       throw error;
@@ -78,6 +83,27 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
       clearTimeout(timeout);
     }
   }
+}
+
+function buildRequest(candidate: AiAnalysisCandidate, model: string) {
+  return {
+    model,
+    store: false,
+    reasoning: { effort: "none" },
+    max_output_tokens: DISCLOSURE_SUMMARY_MAX_OUTPUT_TOKENS,
+    input: [
+      { role: "system", content: [{ type: "input_text", text: DISCLOSURE_SUMMARY_SYSTEM_INSTRUCTION }] },
+      { role: "user", content: [{ type: "input_text", text: buildDisclosureSummaryPrompt(candidate) }] },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "disclosure_summary",
+        strict: true,
+        schema: DISCLOSURE_SUMMARY_JSON_SCHEMA,
+      },
+    },
+  };
 }
 
 function classifyHttpStatus(status: number): string {
@@ -88,19 +114,4 @@ function classifyHttpStatus(status: number): string {
   if (status === 429) return "AI_RATE_LIMITED";
   if (status >= 500) return "AI_PROVIDER_UNAVAILABLE";
   return "AI_UPSTREAM_ERROR";
-}
-
-function buildRequest(candidate: AiAnalysisCandidate) {
-  return {
-    systemInstruction: {
-      parts: [{ text: DISCLOSURE_SUMMARY_SYSTEM_INSTRUCTION }],
-    },
-    contents: [{ role: "user", parts: [{ text: buildDisclosureSummaryPrompt(candidate) }] }],
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: DISCLOSURE_SUMMARY_MAX_OUTPUT_TOKENS,
-      responseMimeType: "application/json",
-      responseSchema: DISCLOSURE_SUMMARY_JSON_SCHEMA,
-    },
-  };
 }

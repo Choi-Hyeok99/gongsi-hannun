@@ -16,6 +16,7 @@
     "generate:disclosure-alerts": "tsx --env-file=.env.local src/jobs/collector/run-disclosure-alert-generation.ts",
     "send:web-push": "tsx --env-file=.env.local src/jobs/collector/run-web-push-delivery.ts",
     "analyze:disclosures": "tsx --env-file=.env.local src/jobs/analyzer/run-ai-disclosure-summary.ts",
+    "compare:ai-providers": "tsx src/jobs/analyzer/run-ai-provider-comparison.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
