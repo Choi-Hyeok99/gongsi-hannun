@@ -37,4 +37,11 @@ describe("analyzePendingDisclosures", () => {
     await expect(analyzePendingDisclosures(repo, provider, { limit: 1, analysisVersion: "v1" })).resolves.toMatchObject({ failedCount: 1 });
     expect(repo.fail).toHaveBeenCalledWith("event-1", "v1", "AI_UPSTREAM_ERROR");
   });
+
+  it("preserves a safe provider diagnostic code", async () => {
+    const repo = repository();
+    const provider: AiDisclosureSummaryProvider = { providerName: "google", modelName: "gemini", summarize: vi.fn(async () => { throw new Error("AI_RATE_LIMITED"); }) };
+    await analyzePendingDisclosures(repo, provider, { limit: 1, analysisVersion: "v1" });
+    expect(repo.fail).toHaveBeenCalledWith("event-1", "v1", "AI_RATE_LIMITED");
+  });
 });

@@ -14,7 +14,7 @@ describe("AiDisclosureSummaryPreview", () => {
   };
 
   it.each([
-    [{ status: "NOT_GENERATED", summary: null } as const, "원문 제공", "AI 해설은 아직 준비되지 않았습니다."],
+    [{ status: "NOT_GENERATED", summary: null } as const, "원문 제공", "이 공시는 AI 해설 대상이 아닐 수 있습니다."],
     [{ status: "PENDING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 예정", "AI 해설을 준비하고 있습니다."],
     [{ status: "PROCESSING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "해설 작성 중", "공시 내용을 확인하고 있습니다."],
     [{ status: "FAILED", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 지연", "AI 해설 준비가 지연되고 있습니다."],
@@ -34,6 +34,13 @@ describe("AiDisclosureSummaryPreview", () => {
     expect(markup).toContain("공시 데이터의 오류가 아닙니다.");
     expect(markup).toContain("원문과 제출 문서는 정상적으로 확인할 수 있으며");
     expect(markup).not.toContain("분석 실패");
+  });
+
+  it("explains when the source document must be collected before AI analysis", () => {
+    const markup = renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} documentStatus="PENDING" state={{ status: "NOT_GENERATED", summary: null }} />);
+    expect(markup).toContain("원문 수집 중");
+    expect(markup).toContain("제출 문서를 수집하고 있습니다");
+    expect(markup).not.toContain("AI 해설은 아직 준비되지 않았습니다");
   });
 
   it("renders a complete report entirely from a stored successful analysis", () => {

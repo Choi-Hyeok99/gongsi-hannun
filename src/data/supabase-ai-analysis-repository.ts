@@ -181,7 +181,9 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
 }
 
 function isRetryableAnalysisState(state: Readonly<{ status: string; attemptCount: number; errorCode: string }>): boolean {
-  return state.status === "FAILED" && state.attemptCount < 2 && state.errorCode !== "AI_INVALID_RESPONSE";
+  return state.status === "FAILED"
+    && state.attemptCount < 2
+    && !["AI_INVALID_RESPONSE", "AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND"].includes(state.errorCode);
 }
 
 export function createSupabaseAiAnalysisRepository(options: RepositoryOptions): AiAnalysisRepository {

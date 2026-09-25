@@ -49,6 +49,17 @@ export async function analyzePendingDisclosures(
 
 function classifyAnalysisError(error: unknown): string {
   if (error instanceof Error && error.name === "AbortError") return "AI_TIMEOUT";
-  if (error instanceof Error && error.message === "AI_INVALID_RESPONSE") return "AI_INVALID_RESPONSE";
+  if (error instanceof Error && SAFE_ANALYSIS_ERROR_CODES.has(error.message)) return error.message;
   return "AI_UPSTREAM_ERROR";
 }
+
+const SAFE_ANALYSIS_ERROR_CODES = new Set([
+  "AI_INVALID_RESPONSE",
+  "AI_INVALID_REQUEST",
+  "AI_AUTH_ERROR",
+  "AI_MODEL_NOT_FOUND",
+  "AI_TIMEOUT",
+  "AI_RATE_LIMITED",
+  "AI_PROVIDER_UNAVAILABLE",
+  "AI_UPSTREAM_ERROR",
+]);

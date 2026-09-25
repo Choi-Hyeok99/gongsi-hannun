@@ -15,15 +15,35 @@ export class SupabaseDisclosureDocumentSyncRepository implements DisclosureDocum
   constructor(private readonly client: SupabaseClient) {}
 
   async listPending(limit: number): Promise<readonly PendingDisclosureDocumentSource[]> {
-    const { data, error } = await this.client
+    const priorityLimit = Math.max(1, Math.ceil(limit * 0.75));
+    const priority = await this.client
       .from("source_disclosures")
-      .select("id,receipt_no,events!inner(visibility)")
+      .select("id,receipt_no,events!inner(visibility,rule_importance_score)")
       .eq("events.visibility", "PUBLIC")
+      .gte("events.rule_importance_score", 85)
       .in("content_fetch_status", ["PENDING", "FETCHING", "FAILED"])
       .order("disclosed_on", { ascending: false })
-      .limit(limit);
-    if (error) throw new DataAccessError("원문 수집 대상 공시를 조회하지 못했습니다.");
-    return (data ?? []).map((row) => ({ id: String(row.id), receiptNumber: String(row.receipt_no) }));
+      .limit(priorityLimit);
+    if (priority.error) throw new DataAccessError("중요 공시 원문 수집 대상을 조회하지 못했습니다.");
+
+    const selected = new Map<string, PendingDisclosureDocumentSource>();
+    for (const row of priority.data ?? []) selected.set(String(row.id), toPendingSource(row));
+    if (selected.size < limit) {
+      const backlog = await this.client
+        .from("source_disclosures")
+        .select("id,receipt_no,events!inner(visibility)")
+        .eq("events.visibility", "PUBLIC")
+        .in("content_fetch_status", ["PENDING", "FETCHING", "FAILED"])
+        .order("disclosed_on", { ascending: true })
+        .order("receipt_no", { ascending: true })
+        .limit(limit + selected.size);
+      if (backlog.error) throw new DataAccessError("대기 공시 원문 수집 대상을 조회하지 못했습니다.");
+      for (const row of backlog.data ?? []) {
+        selected.set(String(row.id), toPendingSource(row));
+        if (selected.size >= limit) break;
+      }
+    }
+    return [...selected.values()].slice(0, limit);
   }
 
   async markFetching(sourceDisclosureId: string): Promise<void> {
@@ -72,6 +92,10 @@ export class SupabaseDisclosureDocumentSyncRepository implements DisclosureDocum
       .update({ content_fetch_status: "FAILED", content_fetch_error: message.slice(0, 500) })
       .eq("id", sourceDisclosureId);
   }
+}
+
+function toPendingSource(row: Readonly<{ id: unknown; receipt_no: unknown }>): PendingDisclosureDocumentSource {
+  return { id: String(row.id), receiptNumber: String(row.receipt_no) };
 }
 
 export function createSupabaseDisclosureDocumentSyncRepository(

@@ -53,6 +53,17 @@ describe("GeminiDisclosureSummaryClient", () => {
     await expect(client.summarize(candidate)).rejects.toThrow("AI_INVALID_RESPONSE");
   });
 
+  it.each([
+    [401, "AI_AUTH_ERROR"],
+    [404, "AI_MODEL_NOT_FOUND"],
+    [429, "AI_RATE_LIMITED"],
+    [503, "AI_PROVIDER_UNAVAILABLE"],
+  ])("maps HTTP %i to a safe diagnostic code", async (status, code) => {
+    const fetchImpl = vi.fn(async () => new Response("sensitive upstream detail", { status }));
+    const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
+    await expect(client.summarize(candidate)).rejects.toThrow(code);
+  });
+
   it("caps long filing text before transmission", async () => {
     const fetchImpl: typeof fetch = async (_url, request) => {
       const body = JSON.parse(String(request?.body));

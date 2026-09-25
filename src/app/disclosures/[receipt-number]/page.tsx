@@ -87,6 +87,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             originalUrl={disclosure.originalUrl}
             receiptNumber={disclosure.receiptNumber}
             state={aiSummaryState}
+            documentStatus={documentStatus}
           />
           <DisclosureDocumentList receiptNumber={disclosure.receiptNumber} documents={documents} status={documentStatus} />
           {correctionTimeline.length > 1 && (

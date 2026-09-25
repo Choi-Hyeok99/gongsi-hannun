@@ -7,7 +7,7 @@ import type {
 
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 const MAX_DOCUMENT_CHARACTERS = 14_000;
-const REQUEST_TIMEOUT_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 45_000;
 
 const summarySchema = z.object({
   plainSummary: z.string().trim().min(10).max(500),
@@ -64,7 +64,7 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
           body: JSON.stringify(buildRequest(candidate)),
         },
       );
-      if (!response.ok) throw new Error("AI_UPSTREAM_ERROR");
+      if (!response.ok) throw new Error(classifyHttpStatus(response.status));
       const body = await response.json() as GeminiResponse;
       const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
       if (!text) throw new Error("AI_INVALID_RESPONSE");
@@ -79,6 +79,16 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
       clearTimeout(timeout);
     }
   }
+}
+
+function classifyHttpStatus(status: number): string {
+  if (status === 400 || status === 422) return "AI_INVALID_REQUEST";
+  if (status === 401 || status === 403) return "AI_AUTH_ERROR";
+  if (status === 404) return "AI_MODEL_NOT_FOUND";
+  if (status === 408) return "AI_TIMEOUT";
+  if (status === 429) return "AI_RATE_LIMITED";
+  if (status >= 500) return "AI_PROVIDER_UNAVAILABLE";
+  return "AI_UPSTREAM_ERROR";
 }
 
 function buildRequest(candidate: AiAnalysisCandidate) {
