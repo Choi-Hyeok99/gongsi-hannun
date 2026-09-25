@@ -65,8 +65,18 @@ async function verifyDatabaseSchema(client: SupabaseClient): Promise<readonly Ch
 }
 
 async function verifyStoredData(client: SupabaseClient, requireData: boolean): Promise<readonly CheckResult[]> {
-  const [companies, disclosures, prices] = await Promise.all([
-    client.from("companies").select("id", { head: true, count: "exact" }).eq("is_active", true),
+  const [companies, exposedOtherCompanies, disclosures, prices] = await Promise.all([
+    client
+      .from("companies")
+      .select("id", { head: true, count: "exact" })
+      .eq("is_active", true)
+      .eq("is_listed", true)
+      .in("market", ["KOSPI", "KOSDAQ", "KONEX"]),
+    client
+      .from("companies")
+      .select("id", { head: true, count: "exact" })
+      .eq("is_active", true)
+      .eq("market", "OTHER"),
     client.from("source_disclosures").select("id", { head: true, count: "exact" }),
     client.from("daily_prices").select("id", { head: true, count: "exact" }),
   ]);
@@ -75,7 +85,7 @@ async function verifyStoredData(client: SupabaseClient, requireData: boolean): P
     { label: "공시", result: disclosures },
     { label: "일별 주가", result: prices },
   ] as const;
-  return targets.map(({ label, result }) => {
+  const dataResults = targets.map(({ label, result }) => {
     const { count, error } = result;
     if (error) return { name: `${label} 데이터`, ok: false, detail: "행 개수를 확인하지 못했습니다." };
     const value = count ?? 0;
@@ -85,6 +95,19 @@ async function verifyStoredData(client: SupabaseClient, requireData: boolean): P
       detail: value > 0 ? `${value.toLocaleString("ko-KR")}건 저장됨` : requireData ? "저장된 데이터 없음" : "0건 (최초 수집 전 허용)",
     };
   });
+  const exposedCount = exposedOtherCompanies.count ?? 0;
+  return [
+    ...dataResults,
+    exposedOtherCompanies.error
+      ? { name: "상장 상태 정합성", ok: false, detail: "기타법인 노출 여부를 확인하지 못했습니다." }
+      : {
+        name: "상장 상태 정합성",
+        ok: exposedCount === 0,
+        detail: exposedCount === 0
+          ? "활성 검색 대상에 기타법인이 없습니다."
+          : `기타법인 ${exposedCount.toLocaleString("ko-KR")}건이 활성 상태입니다. 최신 migration을 적용하세요.`,
+      },
+  ];
 }
 
 async function verifyOpenDart(apiKey: string, date: string): Promise<CheckResult> {

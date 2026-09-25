@@ -1,5 +1,9 @@
 export type Market = "KOSPI" | "KOSDAQ" | "KONEX" | "OTHER";
 
+export function isListedMarket(market: Market): boolean {
+  return market === "KOSPI" || market === "KOSDAQ" || market === "KONEX";
+}
+
 export const COMPANY_INDUSTRY_CATEGORIES = [
   "SEMICONDUCTOR",
   "BIO_HEALTHCARE",
