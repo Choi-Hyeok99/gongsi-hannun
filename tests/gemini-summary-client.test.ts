@@ -53,6 +53,13 @@ describe("GeminiDisclosureSummaryClient", () => {
     await expect(client.summarize(candidate)).rejects.toThrow("AI_INVALID_RESPONSE");
   });
 
+  it("keeps a valid summary while dropping an invalid optional fact candidate", async () => {
+    const response = { ...validSummary, factCandidates: [{ kind: "AMOUNT", label: "금액", value: "100", unit: "", sourceQuote: "금액 100" }] };
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(response) }] } }] }), { status: 200 }));
+    const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
+    await expect(client.summarize(candidate)).resolves.toEqual({ ...validSummary, factCandidates: [] });
+  });
+
   it.each([
     [401, "AI_AUTH_ERROR"],
     [404, "AI_MODEL_NOT_FOUND"],

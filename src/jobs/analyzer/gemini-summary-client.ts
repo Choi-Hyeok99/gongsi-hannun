@@ -9,19 +9,21 @@ const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 const MAX_DOCUMENT_CHARACTERS = 14_000;
 const REQUEST_TIMEOUT_MS = 45_000;
 
+const factCandidateSchema = z.object({
+  kind: z.enum(["AMOUNT", "PERCENTAGE", "QUANTITY", "PERIOD"]),
+  label: z.string().trim().min(2).max(80),
+  value: z.string().trim().min(1).max(80),
+  unit: z.string().trim().min(1).max(30),
+  sourceQuote: z.string().trim().min(4).max(300),
+}).strict();
+
 const summarySchema = z.object({
   plainSummary: z.string().trim().min(10).max(500),
   whyItMatters: z.string().trim().min(10).max(900),
   checkpoints: z.array(z.string().trim().min(2).max(180)).min(1).max(3),
   cautions: z.array(z.string().trim().min(2).max(180)).min(1).max(3),
   importanceScore: z.number().int().min(0).max(100),
-  factCandidates: z.array(z.object({
-    kind: z.enum(["AMOUNT", "PERCENTAGE", "QUANTITY", "PERIOD"]),
-    label: z.string().trim().min(2).max(80),
-    value: z.string().trim().min(1).max(80),
-    unit: z.string().trim().min(1).max(30),
-    sourceQuote: z.string().trim().min(4).max(300),
-  }).strict()).max(6),
+  factCandidates: z.array(z.unknown()).max(6),
 }).strict();
 
 type GeminiResponse = Readonly<{
@@ -71,7 +73,13 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
       const parsedJson: unknown = JSON.parse(text);
       const parsed = summarySchema.safeParse(parsedJson);
       if (!parsed.success) throw new Error("AI_INVALID_RESPONSE");
-      return parsed.data;
+      return {
+        ...parsed.data,
+        factCandidates: parsed.data.factCandidates.flatMap((value) => {
+          const fact = factCandidateSchema.safeParse(value);
+          return fact.success ? [fact.data] : [];
+        }),
+      };
     } catch (error) {
       if (error instanceof SyntaxError) throw new Error("AI_INVALID_RESPONSE");
       throw error;
