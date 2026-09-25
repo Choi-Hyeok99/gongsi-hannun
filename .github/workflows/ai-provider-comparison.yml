@@ -3,7 +3,7 @@ name: Compare AI summary providers
 on:
   pull_request:
     branches: [develop]
-    types: [opened]
+    types: [opened, synchronize]
   workflow_dispatch:
     inputs:
       limit:
