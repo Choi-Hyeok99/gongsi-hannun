@@ -1,6 +1,9 @@
 name: Compare AI summary providers
 
 on:
+  pull_request:
+    branches: [develop]
+    types: [opened]
   workflow_dispatch:
     inputs:
       limit:
@@ -14,6 +17,7 @@ permissions:
 
 jobs:
   compare:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -23,7 +27,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GEMINI_MODEL: gemini-3.5-flash-lite
       OPENAI_MODEL: gpt-6-luna
-      AI_COMPARISON_LIMIT: ${{ inputs.limit }}
+      AI_COMPARISON_LIMIT: ${{ inputs.limit || '30' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
