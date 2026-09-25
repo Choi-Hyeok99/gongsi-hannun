@@ -34,6 +34,7 @@ async function main() {
     supabaseUrl: environment.SUPABASE_URL,
     supabaseSecretKey: environment.SUPABASE_SECRET_KEY,
   });
+  process.stdout.write("Comparison environment validated. Reading candidates.\n");
   const candidates = await repository.findCandidates(environment.AI_COMPARISON_LIMIT, `provider-comparison-${Date.now()}`);
   const results: CandidateComparisonResult[] = [];
 
@@ -132,6 +133,12 @@ function singleLine(value: string): string {
 }
 
 main().catch((error: unknown) => {
+  if (error instanceof z.ZodError) {
+    const fields = [...new Set(error.issues.map((issue) => String(issue.path[0] ?? "environment")))].join(",");
+    process.stderr.write(`AI_COMPARISON_INVALID_ENV:${fields}\n`);
+    process.exitCode = 1;
+    return;
+  }
   const message = error instanceof Error && /^AI_[A-Z_]+$/.test(error.message) ? error.message : "AI_COMPARISON_FAILED";
   process.stderr.write(`${message}\n`);
   process.exitCode = 1;

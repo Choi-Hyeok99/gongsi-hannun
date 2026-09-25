@@ -60,7 +60,7 @@ export class OpenAiDisclosureSummaryClient implements AiDisclosureSummaryProvide
         signal: controller.signal,
         body: JSON.stringify(buildRequest(candidate, this.modelName)),
       });
-      if (!response.ok) throw new Error(classifyHttpStatus(response.status));
+      if (!response.ok) throw new Error(await classifyHttpError(response));
       const body = await response.json() as OpenAiResponse;
       if (body.usage) this.onUsage?.({
         inputTokens: body.usage.input_tokens ?? 0,
@@ -106,12 +106,36 @@ function buildRequest(candidate: AiAnalysisCandidate, model: string) {
   };
 }
 
-function classifyHttpStatus(status: number): string {
+async function classifyHttpError(response: Response): Promise<string> {
+  const status = response.status;
   if (status === 400 || status === 422) return "AI_INVALID_REQUEST";
   if (status === 401 || status === 403) return "AI_AUTH_ERROR";
   if (status === 404) return "AI_MODEL_NOT_FOUND";
   if (status === 408) return "AI_TIMEOUT";
-  if (status === 429) return "AI_RATE_LIMITED";
+  if (status === 429) {
+    const error = await readOpenAiError(response);
+    const quotaCodes = new Set([
+      "credit_balance_exhausted",
+      "organization_spend_limit_exceeded",
+      "project_spend_limit_exceeded",
+      "organization_usage_limit_exceeded",
+    ]);
+    return error.type === "insufficient_quota" || (error.code !== null && quotaCodes.has(error.code))
+      ? "AI_QUOTA_EXHAUSTED"
+      : "AI_RATE_LIMITED";
+  }
   if (status >= 500) return "AI_PROVIDER_UNAVAILABLE";
   return "AI_UPSTREAM_ERROR";
+}
+
+async function readOpenAiError(response: Response): Promise<Readonly<{ code: string | null; type: string | null }>> {
+  try {
+    const body = await response.json() as Readonly<{ error?: Readonly<{ code?: unknown; type?: unknown }> }>;
+    return {
+      code: typeof body.error?.code === "string" ? body.error.code : null,
+      type: typeof body.error?.type === "string" ? body.error.type : null,
+    };
+  } catch {
+    return { code: null, type: null };
+  }
 }
