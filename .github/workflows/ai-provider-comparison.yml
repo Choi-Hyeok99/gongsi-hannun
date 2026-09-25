@@ -27,7 +27,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GEMINI_MODEL: gemini-3.5-flash-lite
       OPENAI_MODEL: gpt-6-luna
-      AI_COMPARISON_LIMIT: ${{ inputs.limit || '30' }}
+      AI_COMPARISON_LIMIT: ${{ github.event_name == 'pull_request' && '1' || inputs.limit || '30' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

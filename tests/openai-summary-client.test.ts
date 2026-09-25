@@ -80,6 +80,14 @@ describe("OpenAiDisclosureSummaryClient", () => {
     await expect(client.summarize(candidate)).rejects.toThrow(code);
   });
 
+  it("distinguishes exhausted account quota from a temporary rate limit", async () => {
+    const client = new OpenAiDisclosureSummaryClient({
+      apiKey: "openai-secret-value-123456",
+      fetchImpl: vi.fn(async () => new Response(JSON.stringify({ error: { code: "insufficient_quota", message: "private detail" } }), { status: 429 })),
+    });
+    await expect(client.summarize(candidate)).rejects.toThrow("AI_QUOTA_EXHAUSTED");
+  });
+
   it("uses the same capped source document contract as Gemini", async () => {
     const fetchImpl: typeof fetch = async (_url, request) => {
       const body = JSON.parse(String(request?.body));

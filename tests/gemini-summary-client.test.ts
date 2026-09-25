@@ -45,6 +45,8 @@ describe("GeminiDisclosureSummaryClient", () => {
     expect(body.generationConfig.responseSchema.properties.checkpoints.maxItems).toBe(2);
     expect(body.generationConfig.responseSchema.properties.cautions.maxItems).toBe(1);
     expect(body.generationConfig.responseSchema.properties.factCandidates.maxItems).toBe(3);
+    expect(body.generationConfig.responseSchema.additionalProperties).toBeUndefined();
+    expect(body.generationConfig.responseSchema.properties.factCandidates.items.additionalProperties).toBeUndefined();
   });
 
   it("rejects malformed model output", async () => {

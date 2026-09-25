@@ -100,7 +100,17 @@ function buildRequest(candidate: AiAnalysisCandidate) {
       temperature: 0.1,
       maxOutputTokens: DISCLOSURE_SUMMARY_MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
-      responseSchema: DISCLOSURE_SUMMARY_JSON_SCHEMA,
+      responseSchema: removeUnsupportedGeminiSchemaKeywords(DISCLOSURE_SUMMARY_JSON_SCHEMA),
     },
   };
+}
+
+function removeUnsupportedGeminiSchemaKeywords(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(removeUnsupportedGeminiSchemaKeywords);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => key !== "additionalProperties")
+      .map(([key, child]) => [key, removeUnsupportedGeminiSchemaKeywords(child)]),
+  );
 }
