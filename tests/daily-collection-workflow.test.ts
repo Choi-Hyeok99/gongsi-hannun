@@ -23,9 +23,10 @@ describe("daily market data workflow", () => {
     expect(workflow).toContain("WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}");
   });
 
-  it("runs bounded AI analysis only after the final market collection", () => {
-    expect(workflow).toContain("github.event.schedule == '20 9 * * 1-5'");
-    expect(workflow).toContain('AI_ANALYSIS_LIMIT: "10"');
+  it("runs a bounded AI backfill after both scheduled collections", () => {
+    expect(workflow).toContain("github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'");
+    expect(workflow).toContain('AI_ANALYSIS_LIMIT: "200"');
+    expect(workflow).toContain("timeout-minutes: 60");
   });
 
   it("keeps KRX collection running when OpenDART is unavailable and reports source failures", () => {

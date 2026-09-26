@@ -44,4 +44,33 @@ describe("analyzePendingDisclosures", () => {
     await analyzePendingDisclosures(repo, provider, { limit: 1, analysisVersion: "v1" });
     expect(repo.fail).toHaveBeenCalledWith("event-1", "v1", "AI_RATE_LIMITED");
   });
+
+  it("processes a large batch concurrently without exceeding the safety cap", async () => {
+    const candidates = Array.from({ length: 8 }, (_, index) => ({
+      ...candidate,
+      eventId: `event-${index + 1}`,
+      receiptNumber: String(index + 1),
+    }));
+    const repo = repository({ findCandidates: vi.fn(async () => candidates) });
+    let active = 0;
+    let maximumActive = 0;
+    const provider: AiDisclosureSummaryProvider = {
+      providerName: "google",
+      modelName: "gemini",
+      summarize: vi.fn(async () => {
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        active -= 1;
+        return summary;
+      }),
+    };
+
+    await expect(analyzePendingDisclosures(repo, provider, {
+      limit: 8,
+      analysisVersion: "v1",
+      concurrency: 20,
+    })).resolves.toEqual({ readCount: 8, succeededCount: 8, skippedCount: 0, failedCount: 0 });
+    expect(maximumActive).toBe(5);
+  });
 });

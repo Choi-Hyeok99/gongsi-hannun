@@ -14,14 +14,14 @@ describe("AiDisclosureSummaryPreview", () => {
   };
 
   it.each([
-    [{ status: "NOT_GENERATED", summary: null } as const, "원문 제공", "이 공시는 AI 해설 대상이 아닐 수 있습니다."],
+    [{ status: "NOT_GENERATED", summary: null } as const, "요약 대기", "AI 요약을 순차적으로 준비합니다."],
     [{ status: "PENDING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 예정", "AI 해설을 준비하고 있습니다."],
     [{ status: "PROCESSING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "해설 작성 중", "공시 내용을 확인하고 있습니다."],
     [{ status: "FAILED", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 지연", "AI 해설 준비가 지연되고 있습니다."],
   ])("shows only the factual status and source CTA", (state, badge, title) => {
     const markup = renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} state={state} />);
 
-    expect(markup).toContain("AI 심층 리포트");
+    expect(markup).toContain("AI 공시 해설");
     expect(markup).toContain(badge);
     expect(markup).toContain(title);
     expect(markup).toContain('href="https://dart.fss.or.kr/example"');
@@ -75,6 +75,7 @@ describe("AiDisclosureSummaryPreview", () => {
     for (const text of ["실제 핵심 요약입니다.", "실제 중요 이유입니다.", "매출 수치 확인", "정정공시 여부 확인", "중요도 82/100", "계약금액", "100 억원", "분석 완료"]) {
       expect(markup).toContain(text);
     }
+    expect(markup).toContain("AI 심층 리포트");
     expect(markup).toContain('/disclosures/20260910000001/documents/document-1');
     expect(markup).toContain('href="#filing-documents"');
     expect(markup).toContain("생성형 AI가 공시 원문을 바탕으로 작성했습니다");
@@ -83,11 +84,15 @@ describe("AiDisclosureSummaryPreview", () => {
     expectNoFabricatedAnalysis(markup);
   });
 
-  it("states when a completed analysis has no source-verified numbers", () => {
+  it("shows a compact summary for a lower-importance completed analysis", () => {
     const summary = { plainSummary: "실제 요약", whyItMatters: "중요 이유", checkpoints: [], cautions: [], importanceScore: 40, generatedAt: "2026-09-11T00:00:00Z", verifiedFacts: [] };
     const markup = renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} state={{ status: "READY", summary }} />);
-    expect(markup).toContain("원문과 자동 대조가 완료된 숫자는 없습니다.");
-    expect(markup).toContain("별도로 생성된 확인 항목이 없습니다.");
+    expect(markup).toContain("AI 핵심 요약");
+    expect(markup).toContain("요약 완료");
+    expect(markup).toContain("실제 요약");
+    expect(markup).toContain("중요 이유");
+    expect(markup).toContain("수집된 문서 보기");
+    expect(markup).not.toContain("투자자 확인 항목");
   });
 });
 

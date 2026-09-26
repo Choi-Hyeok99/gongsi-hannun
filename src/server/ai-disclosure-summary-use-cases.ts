@@ -13,35 +13,38 @@ export async function getPublishedAiSummary(repository: AiAnalysisRepository, re
 export async function analyzePendingDisclosures(
   repository: AiAnalysisRepository,
   provider: AiDisclosureSummaryProvider,
-  options: Readonly<{ limit: number; analysisVersion: string }>,
+  options: Readonly<{ limit: number; analysisVersion: string; concurrency?: number }>,
 ): Promise<AiAnalysisCounts> {
   const candidates = await repository.findCandidates(options.limit, options.analysisVersion);
   let succeededCount = 0;
   let skippedCount = 0;
   let failedCount = 0;
+  const concurrency = Math.max(1, Math.min(5, Math.trunc(options.concurrency ?? 3)));
 
-  for (const candidate of candidates) {
-    const started = await repository.begin(candidate, options.analysisVersion);
-    if (!started) {
-      skippedCount += 1;
-      continue;
-    }
-    try {
-      const generated = await provider.summarize(candidate);
-      const summary = {
-        plainSummary: generated.plainSummary,
-        whyItMatters: generated.whyItMatters,
-        checkpoints: generated.checkpoints,
-        cautions: generated.cautions,
-        importanceScore: generated.importanceScore,
-        verifiedFacts: verifyDisclosureFactCandidates(candidate, generated.factCandidates),
-      };
-      await repository.complete(candidate.eventId, options.analysisVersion, provider, summary);
-      succeededCount += 1;
-    } catch (error) {
-      await repository.fail(candidate.eventId, options.analysisVersion, classifyAnalysisError(error));
-      failedCount += 1;
-    }
+  for (let index = 0; index < candidates.length; index += concurrency) {
+    await Promise.all(candidates.slice(index, index + concurrency).map(async (candidate) => {
+      const started = await repository.begin(candidate, options.analysisVersion);
+      if (!started) {
+        skippedCount += 1;
+        return;
+      }
+      try {
+        const generated = await provider.summarize(candidate);
+        const summary = {
+          plainSummary: generated.plainSummary,
+          whyItMatters: generated.whyItMatters,
+          checkpoints: generated.checkpoints,
+          cautions: generated.cautions,
+          importanceScore: generated.importanceScore,
+          verifiedFacts: verifyDisclosureFactCandidates(candidate, generated.factCandidates),
+        };
+        await repository.complete(candidate.eventId, options.analysisVersion, provider, summary);
+        succeededCount += 1;
+      } catch (error) {
+        await repository.fail(candidate.eventId, options.analysisVersion, classifyAnalysisError(error));
+        failedCount += 1;
+      }
+    }));
   }
 
   return { readCount: candidates.length, succeededCount, skippedCount, failedCount };
