@@ -13,13 +13,14 @@ export async function getPublishedAiSummary(repository: AiAnalysisRepository, re
 export async function analyzePendingDisclosures(
   repository: AiAnalysisRepository,
   provider: AiDisclosureSummaryProvider,
-  options: Readonly<{ limit: number; analysisVersion: string; concurrency?: number }>,
+  options: Readonly<{ limit: number; analysisVersion: string; concurrency?: number; batchDelayMs?: number }>,
 ): Promise<AiAnalysisCounts> {
   const candidates = await repository.findCandidates(options.limit, options.analysisVersion);
   let succeededCount = 0;
   let skippedCount = 0;
   let failedCount = 0;
   const concurrency = Math.max(1, Math.min(5, Math.trunc(options.concurrency ?? 3)));
+  const batchDelayMs = Math.max(0, Math.min(10_000, Math.trunc(options.batchDelayMs ?? 0)));
 
   for (let index = 0; index < candidates.length; index += concurrency) {
     await Promise.all(candidates.slice(index, index + concurrency).map(async (candidate) => {
@@ -45,6 +46,9 @@ export async function analyzePendingDisclosures(
         failedCount += 1;
       }
     }));
+    if (batchDelayMs > 0 && index + concurrency < candidates.length) {
+      await new Promise((resolve) => setTimeout(resolve, batchDelayMs));
+    }
   }
 
   return { readCount: candidates.length, succeededCount, skippedCount, failedCount };

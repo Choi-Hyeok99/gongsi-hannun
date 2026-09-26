@@ -18,6 +18,7 @@ describe("AiDisclosureSummaryPreview", () => {
     [{ status: "PENDING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 예정", "AI 해설을 준비하고 있습니다."],
     [{ status: "PROCESSING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "해설 작성 중", "공시 내용을 확인하고 있습니다."],
     [{ status: "FAILED", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 지연", "AI 해설 준비가 지연되고 있습니다."],
+    [{ status: "UNAVAILABLE", summary: null, updatedAt: null } as const, "상태 확인 지연", "AI 해설 상태를 불러오지 못했습니다."],
   ])("shows only the factual status and source CTA", (state, badge, title) => {
     const markup = renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} state={state} />);
 
@@ -34,6 +35,13 @@ describe("AiDisclosureSummaryPreview", () => {
     expect(markup).toContain("공시 데이터의 오류가 아닙니다.");
     expect(markup).toContain("원문과 제출 문서는 정상적으로 확인할 수 있으며");
     expect(markup).not.toContain("분석 실패");
+  });
+
+  it("does not present an AI status lookup outage as an analysis failure", () => {
+    const markup = renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} state={{ status: "UNAVAILABLE", summary: null, updatedAt: null }} />);
+
+    expect(markup).toContain("AI 분석 실패를 의미하지 않습니다.");
+    expect(markup).not.toContain("AI 해설 준비가 지연되고 있습니다.");
   });
 
   it("explains when the source document must be collected before AI analysis", () => {
