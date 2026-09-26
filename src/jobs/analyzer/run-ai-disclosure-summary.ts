@@ -13,7 +13,7 @@ async function main() {
       supabaseSecretKey: environment.SUPABASE_SECRET_KEY,
     }),
     new GeminiDisclosureSummaryClient({ apiKey: environment.GEMINI_API_KEY, model: environment.GEMINI_MODEL }),
-    { limit: environment.AI_ANALYSIS_LIMIT, analysisVersion: ANALYSIS_VERSION },
+    { limit: environment.AI_ANALYSIS_LIMIT, analysisVersion: ANALYSIS_VERSION, concurrency: 5 },
   );
   console.log(`AI 공시 요약 완료: 대상 ${counts.readCount}, 성공 ${counts.succeededCount}, 건너뜀 ${counts.skippedCount}, 실패 ${counts.failedCount}`);
   if (counts.failedCount > 0) process.exitCode = 1;

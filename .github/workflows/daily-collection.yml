@@ -23,7 +23,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
@@ -120,12 +120,12 @@ jobs:
         run: npx tsx src/jobs/collector/run-web-push-delivery.ts
 
       - name: Generate AI disclosure summaries
-        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '20 9 * * 1-5'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: gemini-3.5-flash-lite
-          AI_ANALYSIS_LIMIT: "10"
+          AI_ANALYSIS_LIMIT: "200"
         run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts
 
       - name: Report source collection failures

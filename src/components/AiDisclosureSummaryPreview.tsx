@@ -18,7 +18,46 @@ type Props = Readonly<{
 export function AiDisclosureSummaryPreview(props: Props) {
   if (props.state.status !== "READY") return <AiSummaryStatus {...props} />;
 
-  return <AiDeepReport {...props} summary={props.state.summary} />;
+  return props.state.summary.importanceScore >= 70
+    ? <AiDeepReport {...props} summary={props.state.summary} />
+    : <AiQuickSummary {...props} summary={props.state.summary} />;
+}
+
+function AiQuickSummary(props: Props & Readonly<{ summary: AiDisclosureSummary }>) {
+  const { summary } = props;
+  return (
+    <section className="ai-summary-preview" aria-labelledby="ai-summary-heading">
+      <div className="ai-summary-preview__heading">
+        <div><p className="eyebrow">원문 기반 분석</p><h2 id="ai-summary-heading">AI 핵심 요약</h2></div>
+        <span className="ai-summary-preview__badge">요약 완료</span>
+      </div>
+      <div className="deep-report">
+        <section className="deep-report__intro" aria-labelledby="quick-summary-heading">
+          <div><h3 id="quick-summary-heading">{summary.plainSummary}</h3></div>
+          <p>{summary.whyItMatters || "공시 원문의 핵심 내용을 간단히 정리했습니다."}</p>
+          <dl>
+            <div><dt>기업</dt><dd>{props.companyName}</dd></div>
+            <div><dt>공시 유형</dt><dd>{props.eventTypeLabel}</dd></div>
+            <div><dt>요약 생성</dt><dd>{formatKoreanTimestamp(summary.generatedAt)}</dd></div>
+          </dl>
+        </section>
+        <section className="deep-report__evidence" aria-labelledby="quick-summary-evidence-heading">
+          <div>
+            <p className="eyebrow">근거 확인</p>
+            <h3 id="quick-summary-evidence-heading">중요한 판단 전 공시 원문을 확인하세요</h3>
+            <p>{props.reportName} · {props.disclosedOn} · 접수번호 {props.receiptNumber}</p>
+          </div>
+          <div className="deep-report__evidence-actions">
+            <Link href="#filing-documents">수집된 문서 보기</Link>
+            <a href={props.originalUrl} target="_blank" rel="noopener noreferrer">OpenDART 원문</a>
+          </div>
+        </section>
+      </div>
+      <p className="ai-summary-preview__notice">
+        이 요약은 생성형 AI가 공시 원문을 바탕으로 작성했으며 오류가 있을 수 있습니다. 투자 권유가 아니며, 중요한 판단 전 OpenDART 원문을 확인하세요.
+      </p>
+    </section>
+  );
 }
 
 function AiDeepReport(props: Props & Readonly<{ summary: AiDisclosureSummary }>) {
@@ -163,7 +202,7 @@ function AiSummaryStatus(props: Props) {
   return (
     <section className="ai-summary-preview" aria-labelledby="ai-summary-heading">
       <div className="ai-summary-preview__heading">
-        <div><p className="eyebrow">원문 기반 분석</p><h2 id="ai-summary-heading">AI 심층 리포트</h2></div>
+        <div><p className="eyebrow">원문 기반 분석</p><h2 id="ai-summary-heading">AI 공시 해설</h2></div>
         <span className="ai-summary-preview__badge">{content.badge}</span>
       </div>
       <div className="empty-state" role="status">
@@ -178,9 +217,9 @@ function AiSummaryStatus(props: Props) {
 
 const STATUS_CONTENT = {
   NOT_GENERATED: {
-    badge: "원문 제공",
-    title: "이 공시는 AI 해설 대상이 아닐 수 있습니다.",
-    description: "현재는 중요도가 높은 공시부터 제한적으로 해설합니다. 아래 제출 문서와 OpenDART 원문은 바로 확인할 수 있습니다.",
+    badge: "요약 대기",
+    title: "AI 요약을 순차적으로 준비합니다.",
+    description: "공시 원문이 준비된 공개 공시부터 차례로 요약합니다. 아래 제출 문서와 OpenDART 원문은 바로 확인할 수 있습니다.",
   },
   PENDING: {
     badge: "준비 예정",
