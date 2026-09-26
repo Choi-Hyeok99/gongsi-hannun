@@ -27,12 +27,13 @@ export async function SiteHeader() {
         <div className="site-header__nav-cluster">
           <PrimaryNavigation />
           {user ? (
-            <nav className="account-navigation" aria-label="사용자 메뉴">
+            <nav className="account-navigation account-navigation--signed-in" aria-label="사용자 메뉴">
               <Link href="/watchlist">관심기업</Link>
               <Link className="notification-nav" href="/notifications" aria-label={`중요 공시 알림${unreadCount ? `, 읽지 않은 알림 ${unreadCount}개` : ""}`}>
                 <span aria-hidden="true">🔔</span>
                 {unreadCount > 0 ? <strong>{unreadCount > 99 ? "99+" : unreadCount}</strong> : null}
               </Link>
+              <Link href="/account">내 정보</Link>
               <form action={logout} className="auth-nav">
                 <span title={user.email}>{user.email}</span>
                 <button type="submit">로그아웃</button>

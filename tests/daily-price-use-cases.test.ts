@@ -36,9 +36,21 @@ describe("getDailyPriceSnapshot", () => {
     expect(queried).toBe(false);
   });
 
-  it("falls back to the three month period", async () => {
+  it("falls back to the one month period", async () => {
     const result = await getDailyPriceSnapshot(new FixtureRepository([]), "005930", "invalid");
-    expect(result.period).toBe("3M");
+    expect(result.period).toBe("1M");
+  });
+
+  it("supports a one week range using five recent trading days", async () => {
+    let receivedLimit = 0;
+    const repository: DailyPriceQueryRepository = {
+      async findRecentByStockCode(_stockCode, limit) { receivedLimit = limit; return []; },
+    };
+
+    const result = await getDailyPriceSnapshot(repository, "005930", "1W");
+
+    expect(receivedLimit).toBe(5);
+    expect(result.period).toBe("1W");
   });
 
   it("degrades a price data access failure to an empty snapshot", async () => {

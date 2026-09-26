@@ -77,6 +77,8 @@ describe("AiDisclosureSummaryPreview", () => {
     }
     expect(markup).toContain('/disclosures/20260910000001/documents/document-1');
     expect(markup).toContain('href="#filing-documents"');
+    expect(markup).toContain("생성형 AI가 공시 원문을 바탕으로 작성했습니다");
+    expect(markup).toContain("오류가 있을 수 있습니다");
     expect(markup).not.toContain("aria-roledescription=\"carousel\"");
     expectNoFabricatedAnalysis(markup);
   });

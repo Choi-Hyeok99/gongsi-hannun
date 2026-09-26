@@ -5,6 +5,9 @@ export type LoginInput = Readonly<{
 
 export type SignUpInput = LoginInput & Readonly<{
   passwordConfirmation: string;
+  termsAccepted: true;
+  privacyAcknowledged: true;
+  ageConfirmed: true;
 }>;
 
 export type PasswordUpdateInput = Readonly<{
@@ -64,13 +67,22 @@ export function parseSignUpForm(formData: FormData): ValidationResult<SignUpInpu
   const email = normalizeEmail(formData.get("email"));
   const password = readPassword(formData.get("password"));
   const passwordConfirmation = readPassword(formData.get("passwordConfirmation"));
+  const termsAccepted = formData.get("termsAccepted") === "on";
+  const privacyAcknowledged = formData.get("privacyAcknowledged") === "on";
+  const ageConfirmed = formData.get("ageConfirmed") === "on";
   const message = validateEmail(email)
     ?? validatePassword(password)
-    ?? (password === passwordConfirmation ? null : "비밀번호 확인이 일치하지 않습니다.");
+    ?? (password === passwordConfirmation ? null : "비밀번호 확인이 일치하지 않습니다.")
+    ?? (ageConfirmed ? null : "만 14세 이상만 회원가입할 수 있습니다.")
+    ?? (termsAccepted ? null : "이용약관에 동의해 주세요.")
+    ?? (privacyAcknowledged ? null : "개인정보 처리방침을 확인해 주세요.");
 
   return message
     ? { success: false, message }
-    : { success: true, data: { email, password, passwordConfirmation } };
+    : {
+      success: true,
+      data: { email, password, passwordConfirmation, termsAccepted: true, privacyAcknowledged: true, ageConfirmed: true },
+    };
 }
 
 export function parsePasswordUpdateForm(formData: FormData): ValidationResult<PasswordUpdateInput> {
@@ -85,7 +97,7 @@ export function parsePasswordUpdateForm(formData: FormData): ValidationResult<Pa
 }
 
 export function safeRedirectPath(value: string | null, fallback = "/"): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\") || /[\x00-\x1f\x7f]/.test(value)) {
     return fallback;
   }
   return value;

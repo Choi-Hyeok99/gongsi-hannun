@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 import { createNotificationCenterRepository } from "@/data/supabase-notification-center-repository";
 import { readAllNotifications, readNotification } from "@/server/notification-center-use-cases";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { requirePolicyConsents } from "@/server/consent";
 
 async function requireUser(next: string) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  await requirePolicyConsents(supabase, user.id, next);
   return user;
 }
 

@@ -27,7 +27,8 @@ describe("DailyPriceChart source disclosure", () => {
 
   it("uses a compact KRX label and an explicit direction symbol in cards", () => {
     const markup = renderToStaticMarkup(<DailyPriceChart companyName="삼성전자" snapshot={krxSnapshot} compact />);
-    expect(markup).toContain("최근 1개월 일별 종가 · KRX");
+    expect(markup).toContain("최근 거래일 2026.09.10 종가");
+    expect(markup).toContain("그래프 범위 최근 1개월 · KRX 일별 종가");
     expect(markup).toContain("▲");
   });
 
@@ -35,11 +36,14 @@ describe("DailyPriceChart source disclosure", () => {
     const markup = renderToStaticMarkup(<DailyPriceChart companyName="삼성전자" snapshot={krxSnapshot} />);
     expect(markup).toContain("기간 고가");
     expect(markup).toContain("기간 저가");
+    expect(markup).toContain("그래프 범위");
+    expect(markup).toContain("최근 1개월");
     expect(markup).toContain("선택일");
     expect(markup).toContain("시가");
     expect(markup).toContain("고가");
     expect(markup).toContain("저가");
     expect(markup).toContain("종가");
+    expect(markup).toContain("전일 대비");
     expect(markup).toContain("거래량");
     expect(markup).toContain("price-chart__crosshair");
     expect(markup).toContain("price-chart__volume");

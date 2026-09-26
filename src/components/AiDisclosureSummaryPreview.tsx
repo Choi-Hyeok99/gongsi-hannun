@@ -83,7 +83,7 @@ function AiDeepReport(props: Props & Readonly<{ summary: AiDisclosureSummary }>)
       </div>
 
       <p className="ai-summary-preview__notice">
-        실제 저장된 AI 분석 결과만 표시합니다. 투자 권유가 아니며, 중요한 판단 전 원문을 확인하세요.
+        이 해설은 생성형 AI가 공시 원문을 바탕으로 작성했습니다. 실제 저장되고 검증 절차를 거친 분석 결과만 표시하지만 오류가 있을 수 있습니다. 투자 권유가 아니며, 중요한 판단 전 OpenDART 원문을 확인하세요.
       </p>
     </section>
   );

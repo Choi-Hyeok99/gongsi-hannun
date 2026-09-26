@@ -1,3 +1,5 @@
+import React from "react";
+
 type Props = Readonly<{
   error?: string;
   message?: string;

@@ -31,11 +31,47 @@ describe("authentication input validation", () => {
     }));
     expect(result).toEqual({ success: false, message: "비밀번호 확인이 일치하지 않습니다." });
   });
+
+  it("requires age confirmation before signup", () => {
+    const result = parseSignUpForm(form({
+      email: "user@example.com",
+      password: "correct-password",
+      passwordConfirmation: "correct-password",
+      termsAccepted: "on",
+      privacyAcknowledged: "on",
+    }));
+    expect(result).toEqual({
+      success: false,
+      message: "만 14세 이상만 회원가입할 수 있습니다.",
+    });
+  });
+
+  it("accepts signup when age and required policies are confirmed", () => {
+    const result = parseSignUpForm(form({
+      email: "USER@example.com",
+      password: "correct-password",
+      passwordConfirmation: "correct-password",
+      ageConfirmed: "on",
+      termsAccepted: "on",
+      privacyAcknowledged: "on",
+    }));
+    expect(result).toEqual({
+      success: true,
+      data: {
+        email: "user@example.com",
+        password: "correct-password",
+        passwordConfirmation: "correct-password",
+        ageConfirmed: true,
+        termsAccepted: true,
+        privacyAcknowledged: true,
+      },
+    });
+  });
 });
 
 describe("safeRedirectPath", () => {
   it("allows an internal path", () => expect(safeRedirectPath("/companies/005930")).toBe("/companies/005930"));
-  it.each(["https://evil.example", "//evil.example", "/\\evil.example", null])("rejects unsafe redirect %s", (value) => {
+  it.each(["https://evil.example", "//evil.example", "/\\evil.example", "/\n/evil.example", "/\t/evil.example", null])("rejects unsafe redirect %s", (value) => {
     expect(safeRedirectPath(value)).toBe("/");
   });
 });
@@ -59,7 +95,7 @@ describe("buildTrustedSiteUrl", () => {
     expect(buildTrustedSiteUrl("https://preview.example", "/watchlist")).toBe("https://preview.example/watchlist");
   });
 
-  it.each(["https://evil.example", "//evil.example", "/\\evil.example"])("rejects unsafe post-login destination %s", (path) => {
+  it.each(["https://evil.example", "//evil.example", "/\\evil.example", "/\n/evil.example", "/\t/evil.example"])("rejects unsafe post-login destination %s", (path) => {
     expect(buildTrustedSiteUrl("https://preview.example", path)).toBe("https://preview.example/");
   });
 });

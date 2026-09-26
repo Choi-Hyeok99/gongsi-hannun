@@ -10,6 +10,7 @@ import { parseWatchlistCommand } from "@/domain/watchlist";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { setSavedState } from "@/server/watchlist-use-cases";
 import { ensureDefaultAlertPreference, updateAlertPreference } from "@/server/notification-center-use-cases";
+import { requirePolicyConsents } from "@/server/consent";
 
 function companyPath(stockCode: string): string {
   return `/companies/${stockCode}`;
@@ -27,6 +28,7 @@ export async function updateWatchlist(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(path)}&message=${encodeURIComponent("로그인 후 관심기업을 저장할 수 있습니다.")}`);
+  await requirePolicyConsents(supabase, user.id, path);
 
   const company = await createWatchlistCompanyReader().findByStockCode(command.stockCode);
   if (!company) redirectWithStatus(path, "error", "기업 정보를 찾지 못했습니다.");
@@ -52,6 +54,7 @@ export async function updateWatchlistAlertPreference(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent("/watchlist")}`);
+  await requirePolicyConsents(supabase, user.id, "/watchlist");
 
   try {
     await updateAlertPreference(new SupabaseAlertPreferenceRepository(supabase), user.id, preference);

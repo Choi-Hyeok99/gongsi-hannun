@@ -41,13 +41,14 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
     return (
       <div className="price-chart price-chart--compact">
         <div className="price-chart__summary">
+          <span className="price-chart__latest-label">최근 거래일 {formatFullDate(snapshot.latest.tradingDate)} 종가</span>
           <strong>{formatWon(snapshot.latest.closePrice)}</strong>
           {snapshot.changeAmount !== null && (
             <span className={`price-change price-change--${direction}`}>{formatChange(snapshot.changeAmount, snapshot.changeRate)}</span>
           )}
         </div>
         <svg className="price-chart__svg" viewBox={`0 0 ${WIDTH} ${PRICE_HEIGHT}`} preserveAspectRatio="none" role="img"
-          aria-label={`${companyName} ${snapshot.period} 일별 종가 그래프. ${firstDate}부터 ${latestDate}까지, 최근 종가 ${formatWon(snapshot.latest.closePrice)}`}>
+          aria-label={`${companyName} ${formatPeriod(snapshot.period)} 일별 종가 그래프. ${firstDate}부터 ${latestDate}까지, 최근 종가 ${formatWon(snapshot.latest.closePrice)}`}>
           <path className={`price-chart__line price-chart__line--${direction}`} d={path} vectorEffect="non-scaling-stroke" />
         </svg>
         <small className="price-chart__notice">{getPriceNotice(snapshot, true)}</small>
@@ -58,7 +59,10 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
   if (snapshot.points.length < 2) {
     return (
       <div className="price-chart price-chart--detailed">
-        <div className="price-chart__summary"><strong>{formatWon(snapshot.latest.closePrice)}</strong></div>
+        <div className="price-chart__summary">
+          <span className="price-chart__latest-label">최근 거래일 {formatFullDate(snapshot.latest.tradingDate)} 종가</span>
+          <strong>{formatWon(snapshot.latest.closePrice)}</strong>
+        </div>
         <small className="price-chart__notice">{getPriceNotice(snapshot, false)}</small>
         {snapshot.sourceId === DAILY_PRICE_SOURCE_ID && <small className="price-chart__source">출처: 한국거래소 통계정보</small>}
       </div>
@@ -72,6 +76,11 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
   const maximumVolume = Math.max(...snapshot.points.map((point) => point.volume ?? 0), 1);
   const activeIndex = selectedIndex ?? snapshot.points.length - 1;
   const selected = snapshot.points[activeIndex] ?? snapshot.latest;
+  const selectedPrevious = activeIndex > 0 ? snapshot.points[activeIndex - 1] : null;
+  const selectedChange = selectedPrevious ? selected.closePrice - selectedPrevious.closePrice : null;
+  const selectedChangeRate = selectedChange !== null && selectedPrevious && selectedPrevious.closePrice > 0
+    ? (selectedChange / selectedPrevious.closePrice) * 100
+    : null;
   const selectedX = pointX(activeIndex, snapshot.points.length, plotWidth);
   const selectedY = priceY(selected.closePrice, minimum, range);
   const periodHigh = Math.max(...snapshot.points.map((point) => point.highPrice ?? point.closePrice));
@@ -87,13 +96,14 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
   return (
     <div className="price-chart price-chart--detailed">
       <div className="price-chart__summary">
+        <span className="price-chart__latest-label">최근 거래일 {formatFullDate(snapshot.latest.tradingDate)} 종가</span>
         <strong>{formatWon(snapshot.latest.closePrice)}</strong>
         {snapshot.previous && snapshot.changeAmount !== null && (
           <span className={`price-change price-change--${direction}`}>직전 거래일({formatDate(snapshot.previous.tradingDate)}) 대비 {formatChange(snapshot.changeAmount, snapshot.changeRate)}</span>
         )}
-        <span className="price-chart__as-of">{latestDate} 종가 기준</span>
       </div>
-      <div className="price-chart__period-stats" aria-label={`${snapshot.period} 기간 통계`}>
+      <div className="price-chart__period-stats" aria-label={`${formatPeriod(snapshot.period)} 기간 통계`}>
+        <span>그래프 범위 <strong>{formatPeriod(snapshot.period)}</strong></span>
         <span>기간 고가 <strong>{formatWon(periodHigh)}</strong></span>
         <span>기간 저가 <strong>{formatWon(periodLow)}</strong></span>
       </div>
@@ -103,7 +113,7 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
         preserveAspectRatio="none"
         role="img"
         tabIndex={0}
-        aria-label={`${companyName} ${snapshot.period} 일별 가격과 거래량 그래프. 좌우 방향키나 포인터로 날짜별 상세 값을 확인할 수 있습니다.`}
+        aria-label={`${companyName} ${formatPeriod(snapshot.period)} 일별 가격과 거래량 그래프. 좌우 방향키나 포인터로 날짜별 상세 값을 확인할 수 있습니다.`}
         onPointerMove={selectFromPointer}
         onPointerDown={selectFromPointer}
         onPointerLeave={() => setSelectedIndex(null)}
@@ -143,6 +153,7 @@ export function DailyPriceChart({ companyName, snapshot, compact = false }: Prop
         <div><dt>고가</dt><dd>{formatWon(selected.highPrice ?? selected.closePrice)}</dd></div>
         <div><dt>저가</dt><dd>{formatWon(selected.lowPrice ?? selected.closePrice)}</dd></div>
         <div><dt>종가</dt><dd>{formatWon(selected.closePrice)}</dd></div>
+        <div><dt>전일 대비</dt><dd>{selectedChange === null ? "비교 없음" : formatChange(selectedChange, selectedChangeRate)}</dd></div>
         <div><dt>거래량</dt><dd>{selected.volume === null ? "정보 없음" : `${formatNumber(selected.volume)}주`}</dd></div>
       </dl>
       <small className="price-chart__notice">그래프를 가리키거나 터치하면 날짜별 상세 값을 볼 수 있습니다 · {getPriceNotice(snapshot, false)}</small>
@@ -192,9 +203,19 @@ function formatDate(value: string | undefined): string {
   return year && month && day ? `${year.slice(2)}.${month}.${day}` : value;
 }
 
+function formatFullDate(value: string | undefined): string {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  return year && month && day ? `${year}.${month}.${day}` : value;
+}
+
+function formatPeriod(period: DailyPriceSnapshot["period"]): string {
+  return { "1W": "최근 1주", "1M": "최근 1개월", "3M": "최근 3개월", "1Y": "최근 1년" }[period];
+}
+
 function getPriceNotice(snapshot: DailyPriceSnapshot, compact: boolean): string {
   const latestDate = formatDate(snapshot.latest?.tradingDate);
   if (snapshot.status === "INSUFFICIENT_HISTORY") return `기준일 ${latestDate} · 비교 가능한 직전 거래일 데이터 없음`;
   if (snapshot.status === "STALE") return `기준일 ${latestDate} · 최신 일별 종가 수집 지연`;
-  return compact ? `기준일 ${latestDate} · 최근 1개월 일별 종가 · KRX` : `기준일 ${latestDate} · KRX 거래일별 종가`;
+  return compact ? `그래프 범위 최근 1개월 · KRX 일별 종가` : `최근 거래일 ${latestDate} · KRX 거래일별 종가`;
 }
