@@ -118,14 +118,14 @@ export default async function CompanyPage({ params, searchParams }: Props) {
               <h2 id="daily-price-heading">주가 흐름</h2>
             </div>
             <nav className="period-tabs" aria-label="주가 조회 기간">
-              {(["1M", "3M", "1Y"] as const).map((period) => (
+              {(["1W", "1M", "3M", "1Y"] as const).map((period) => (
                 <Link
                   className={priceSnapshot.period === period ? "period-tab period-tab--active" : "period-tab"}
                   href={`/companies/${stockCode}?period=${period}`}
                   aria-current={priceSnapshot.period === period ? "page" : undefined}
                   key={period}
                 >
-                  {period}
+                  {{ "1W": "1주", "1M": "1개월", "3M": "3개월", "1Y": "1년" }[period]}
                 </Link>
               ))}
             </nav>

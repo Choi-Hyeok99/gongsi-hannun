@@ -41,7 +41,7 @@ export interface DailyPriceTargetRepository {
   listActiveStockCodes(): Promise<readonly string[]>;
 }
 
-export const DAILY_PRICE_PERIODS = ["1M", "3M", "1Y"] as const;
+export const DAILY_PRICE_PERIODS = ["1W", "1M", "3M", "1Y"] as const;
 export type DailyPricePeriod = (typeof DAILY_PRICE_PERIODS)[number];
 export const DAILY_PRICE_SOURCE_ID = "KRX_DAILY";
 export type DailyPriceStatus = "READY" | "NO_DATA" | "INSUFFICIENT_HISTORY" | "STALE" | "ERROR";

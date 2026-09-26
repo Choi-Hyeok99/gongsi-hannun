@@ -9,6 +9,7 @@ import {
 import { DataAccessError } from "@/domain/errors";
 
 const POINT_LIMITS: Readonly<Record<DailyPricePeriod, number>> = {
+  "1W": 5,
   "1M": 25,
   "3M": 70,
   "1Y": 260,
@@ -82,7 +83,7 @@ function createSnapshot(rawPoints: readonly DailyPricePoint[], period: DailyPric
 }
 
 function parsePeriod(value: string | null): DailyPricePeriod {
-  return DAILY_PRICE_PERIODS.find((period) => period === value) ?? "3M";
+  return DAILY_PRICE_PERIODS.find((period) => period === value) ?? "1M";
 }
 
 function noDataSnapshot(period: DailyPricePeriod): DailyPriceSnapshot {
