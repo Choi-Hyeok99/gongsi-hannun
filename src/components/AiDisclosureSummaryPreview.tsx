@@ -36,8 +36,8 @@ function AiQuickSummary(props: Props & Readonly<{ summary: AiDisclosureSummary }
           <div><h3 id="quick-summary-heading">{summary.plainSummary}</h3></div>
           <p>{summary.whyItMatters || "공시 원문의 핵심 내용을 간단히 정리했습니다."}</p>
           <dl>
-            <div><dt>기업</dt><dd>{props.companyName}</dd></div>
-            <div><dt>공시 유형</dt><dd>{props.eventTypeLabel}</dd></div>
+            <div className="deep-report__context"><dt>기업</dt><dd>{props.companyName}</dd></div>
+            <div className="deep-report__context"><dt>공시 유형</dt><dd>{props.eventTypeLabel}</dd></div>
             <div><dt>요약 생성</dt><dd>{formatKoreanTimestamp(summary.generatedAt)}</dd></div>
           </dl>
         </section>
@@ -83,8 +83,8 @@ function AiDeepReport(props: Props & Readonly<{ summary: AiDisclosureSummary }>)
           </div>
           <p>{summary.whyItMatters || "별도의 중요성 해설이 생성되지 않았습니다."}</p>
           <dl>
-            <div><dt>기업</dt><dd>{props.companyName}</dd></div>
-            <div><dt>공시 유형</dt><dd>{props.eventTypeLabel}</dd></div>
+            <div className="deep-report__context"><dt>기업</dt><dd>{props.companyName}</dd></div>
+            <div className="deep-report__context"><dt>공시 유형</dt><dd>{props.eventTypeLabel}</dd></div>
             <div><dt>분석 생성</dt><dd>{formatKoreanTimestamp(summary.generatedAt)}</dd></div>
           </dl>
         </section>
@@ -235,6 +235,11 @@ const STATUS_CONTENT = {
     badge: "준비 지연",
     title: "AI 해설 준비가 지연되고 있습니다.",
     description: "공시 데이터의 오류가 아닙니다. 원문과 제출 문서는 정상적으로 확인할 수 있으며, 검증되지 않은 해설은 표시하지 않습니다.",
+  },
+  UNAVAILABLE: {
+    badge: "상태 확인 지연",
+    title: "AI 해설 상태를 불러오지 못했습니다.",
+    description: "AI 분석 실패를 의미하지 않습니다. 공시 원문과 제출 문서는 정상적으로 확인할 수 있으며, 잠시 후 다시 확인해 주세요.",
   },
 } as const;
 

@@ -194,9 +194,10 @@ function toCandidate(
 }
 
 function isRetryableAnalysisState(state: Readonly<{ status: string; attemptCount: number; errorCode: string }>): boolean {
-  return state.status === "FAILED"
-    && state.attemptCount < 2
-    && !["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND"].includes(state.errorCode);
+  if (state.status !== "FAILED") return false;
+  if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND"].includes(state.errorCode)) return false;
+  if (state.errorCode === "AI_RATE_LIMITED") return state.attemptCount < 4;
+  return state.attemptCount < 2;
 }
 
 export function createSupabaseAiAnalysisRepository(options: RepositoryOptions): AiAnalysisRepository {
