@@ -45,13 +45,15 @@ describe("account and policy UI", () => {
     expect(privacy).toContain("정식 공개 전 확정 필요");
   });
 
-  it("requires separate policy checkboxes in email signup and consent", async () => {
+  it("requires age, terms agreement, and privacy acknowledgement in email signup and consent", async () => {
     const signup = renderToStaticMarkup(await SignUpPage({ searchParams: Promise.resolve({}) }));
     const consent = renderToStaticMarkup(await ConsentPage({ searchParams: Promise.resolve({}) }));
     for (const markup of [signup, consent]) {
       expect(markup).toContain('name="termsAccepted"');
-      expect(markup).toContain('name="privacyAccepted"');
-      expect(markup.match(/type="checkbox"[^>]*required=""/g)).toHaveLength(2);
+      expect(markup).toContain('name="privacyAcknowledged"');
+      expect(markup).toContain('name="ageConfirmed"');
+      expect(markup.match(/type="checkbox"[^>]*required=""/g)).toHaveLength(3);
+      expect(markup).not.toContain("개인정보 처리방침</a>을 확인하고 동의합니다");
     }
   });
 

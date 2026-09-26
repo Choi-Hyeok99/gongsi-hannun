@@ -27,15 +27,16 @@ export default async function ConsentPage({ searchParams }: Props) {
         <section className="auth-card" aria-labelledby="consent-heading">
           <p className="eyebrow">서비스 이용 전 확인</p>
           <h1 id="consent-heading">필수 동의</h1>
-          <p className="auth-description">계정을 계속 사용하려면 아래 두 정책을 확인해 주세요. 선택 광고·마케팅 동의는 포함되지 않습니다.</p>
+          <p className="auth-description">계정을 계속 사용하려면 연령과 정책을 확인해 주세요. 선택 광고·마케팅 동의는 포함되지 않습니다.</p>
           <AuthMessage error={parameters.error} />
           <p className="policy-draft-notice" role="note">정책의 운영자 정보 등 미확정 항목은 정식 공개 전 확정 필요합니다.</p>
           <form action={acceptRequiredPolicies} className="auth-form">
             <input type="hidden" name="next" value={safeRedirectPath(parameters.next ?? null)} />
             <fieldset className="policy-consents">
-              <legend>필수 약관</legend>
+              <legend>필수 확인</legend>
+              <label><input name="ageConfirmed" type="checkbox" value="on" required /><span>만 14세 이상입니다. (필수)</span></label>
               <label><input name="termsAccepted" type="checkbox" value="on" required /><span><Link href="/terms" target="_blank" rel="noopener noreferrer">이용약관</Link>에 동의합니다. (필수)</span></label>
-              <label><input name="privacyAccepted" type="checkbox" value="on" required /><span><Link href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리방침</Link>을 확인하고 동의합니다. (필수)</span></label>
+              <label><input name="privacyAcknowledged" type="checkbox" value="on" required /><span><Link href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리방침</Link>을 확인했습니다. (필수 확인)</span></label>
             </fieldset>
             <button type="submit">동의하고 계속하기</button>
           </form>

@@ -25,12 +25,25 @@ export function hasCurrentRequiredPolicies(
 
 export function parseRequiredPolicyAgreement(formData: FormData) {
   const termsAccepted = formData.get("termsAccepted") === "on";
-  const privacyAccepted = formData.get("privacyAccepted") === "on";
+  const privacyAcknowledged = formData.get("privacyAcknowledged") === "on";
+  const ageConfirmed = formData.get("ageConfirmed") === "on";
 
-  if (!termsAccepted || !privacyAccepted) {
+  if (!ageConfirmed) {
     return {
       success: false as const,
-      message: "이용약관과 개인정보처리방침에 모두 동의해 주세요.",
+      message: "만 14세 이상만 서비스를 이용할 수 있습니다.",
+    };
+  }
+  if (!termsAccepted) {
+    return {
+      success: false as const,
+      message: "이용약관에 동의해 주세요.",
+    };
+  }
+  if (!privacyAcknowledged) {
+    return {
+      success: false as const,
+      message: "개인정보 처리방침을 확인해 주세요.",
     };
   }
 

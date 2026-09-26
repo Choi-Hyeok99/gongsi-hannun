@@ -32,26 +32,28 @@ describe("authentication input validation", () => {
     expect(result).toEqual({ success: false, message: "비밀번호 확인이 일치하지 않습니다." });
   });
 
-  it("requires both policy agreements for signup", () => {
+  it("requires age confirmation before signup", () => {
     const result = parseSignUpForm(form({
       email: "user@example.com",
       password: "correct-password",
       passwordConfirmation: "correct-password",
       termsAccepted: "on",
+      privacyAcknowledged: "on",
     }));
     expect(result).toEqual({
       success: false,
-      message: "이용약관과 개인정보처리방침에 모두 동의해 주세요.",
+      message: "만 14세 이상만 회원가입할 수 있습니다.",
     });
   });
 
-  it("accepts signup when both required policies are checked", () => {
+  it("accepts signup when age and required policies are confirmed", () => {
     const result = parseSignUpForm(form({
       email: "USER@example.com",
       password: "correct-password",
       passwordConfirmation: "correct-password",
+      ageConfirmed: "on",
       termsAccepted: "on",
-      privacyAccepted: "on",
+      privacyAcknowledged: "on",
     }));
     expect(result).toEqual({
       success: true,
@@ -59,8 +61,9 @@ describe("authentication input validation", () => {
         email: "user@example.com",
         password: "correct-password",
         passwordConfirmation: "correct-password",
+        ageConfirmed: true,
         termsAccepted: true,
-        privacyAccepted: true,
+        privacyAcknowledged: true,
       },
     });
   });

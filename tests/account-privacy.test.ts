@@ -19,12 +19,27 @@ function form(values: Record<string, string>) {
   return data;
 }
 
-describe("required policy consent", () => {
-  it("requires both explicit checkboxes", () => {
-    expect(parseRequiredPolicyAgreement(form({ termsAccepted: "on" }))).toEqual({
+describe("required policy confirmation", () => {
+  it("requires privacy acknowledgement separately from terms agreement", () => {
+    expect(parseRequiredPolicyAgreement(form({ ageConfirmed: "on", termsAccepted: "on" }))).toEqual({
       success: false,
-      message: "이용약관과 개인정보처리방침에 모두 동의해 주세요.",
+      message: "개인정보 처리방침을 확인해 주세요.",
     });
+  });
+
+  it("requires the user to confirm they are at least 14", () => {
+    expect(parseRequiredPolicyAgreement(form({ termsAccepted: "on", privacyAcknowledged: "on" }))).toEqual({
+      success: false,
+      message: "만 14세 이상만 서비스를 이용할 수 있습니다.",
+    });
+  });
+
+  it("accepts age, terms, and privacy confirmation together", () => {
+    expect(parseRequiredPolicyAgreement(form({
+      ageConfirmed: "on",
+      termsAccepted: "on",
+      privacyAcknowledged: "on",
+    }))).toEqual({ success: true });
   });
 
   it("recognizes only the current required versions", () => {

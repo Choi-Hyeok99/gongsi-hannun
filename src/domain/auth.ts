@@ -6,7 +6,8 @@ export type LoginInput = Readonly<{
 export type SignUpInput = LoginInput & Readonly<{
   passwordConfirmation: string;
   termsAccepted: true;
-  privacyAccepted: true;
+  privacyAcknowledged: true;
+  ageConfirmed: true;
 }>;
 
 export type PasswordUpdateInput = Readonly<{
@@ -67,17 +68,20 @@ export function parseSignUpForm(formData: FormData): ValidationResult<SignUpInpu
   const password = readPassword(formData.get("password"));
   const passwordConfirmation = readPassword(formData.get("passwordConfirmation"));
   const termsAccepted = formData.get("termsAccepted") === "on";
-  const privacyAccepted = formData.get("privacyAccepted") === "on";
+  const privacyAcknowledged = formData.get("privacyAcknowledged") === "on";
+  const ageConfirmed = formData.get("ageConfirmed") === "on";
   const message = validateEmail(email)
     ?? validatePassword(password)
     ?? (password === passwordConfirmation ? null : "비밀번호 확인이 일치하지 않습니다.")
-    ?? (termsAccepted && privacyAccepted ? null : "이용약관과 개인정보처리방침에 모두 동의해 주세요.");
+    ?? (ageConfirmed ? null : "만 14세 이상만 회원가입할 수 있습니다.")
+    ?? (termsAccepted ? null : "이용약관에 동의해 주세요.")
+    ?? (privacyAcknowledged ? null : "개인정보 처리방침을 확인해 주세요.");
 
   return message
     ? { success: false, message }
     : {
       success: true,
-      data: { email, password, passwordConfirmation, termsAccepted: true, privacyAccepted: true },
+      data: { email, password, passwordConfirmation, termsAccepted: true, privacyAcknowledged: true, ageConfirmed: true },
     };
 }
 

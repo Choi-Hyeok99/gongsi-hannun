@@ -33,9 +33,10 @@ export default async function SignUpPage({ searchParams }: Props) {
             <small id="password-help">12자 이상 72자 이하로 입력해 주세요.</small>
             <label>비밀번호 확인<input name="passwordConfirmation" type="password" autoComplete="new-password" required minLength={12} maxLength={72} /></label>
             <fieldset className="policy-consents">
-              <legend>필수 동의</legend>
+              <legend>가입 전 필수 확인</legend>
+              <label><input name="ageConfirmed" type="checkbox" value="on" required /><span>만 14세 이상입니다. (필수)</span></label>
               <label><input name="termsAccepted" type="checkbox" value="on" required /><span><Link href="/terms" target="_blank" rel="noopener noreferrer">이용약관</Link>에 동의합니다. (필수)</span></label>
-              <label><input name="privacyAccepted" type="checkbox" value="on" required /><span><Link href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리방침</Link>을 확인하고 동의합니다. (필수)</span></label>
+              <label><input name="privacyAcknowledged" type="checkbox" value="on" required /><span><Link href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리방침</Link>을 확인했습니다. (필수 확인)</span></label>
               <small>정책의 미확정 항목은 정식 공개 전에 확정되어야 합니다.</small>
             </fieldset>
             <button type="submit">인증 메일 받기</button>
