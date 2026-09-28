@@ -21,6 +21,10 @@ type GeminiResponse = Readonly<{
   usageMetadata?: Readonly<{ promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number }>;
 }>;
 
+type GeminiErrorResponse = Readonly<{
+  error?: Readonly<{ status?: string; message?: string }>;
+}>;
+
 export type AiProviderUsage = Readonly<{ inputTokens: number; outputTokens: number; totalTokens: number }>;
 
 type Options = Readonly<{
@@ -47,6 +51,22 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
     this.onUsage = options.onUsage;
   }
 
+  async assertAvailable(): Promise<void> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const response = await this.fetchImpl(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.modelName)}`,
+        { headers: { "x-goog-api-key": this.apiKey }, signal: controller.signal },
+      );
+      if (!response.ok) throw new Error(await classifyResponse(response));
+    } catch (error) {
+      throw normalizeClientError(error);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   async summarize(candidate: AiAnalysisCandidate): Promise<GeneratedAiDisclosureSummaryCandidate> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -60,7 +80,7 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
           body: JSON.stringify(buildRequest(candidate)),
         },
       );
-      if (!response.ok) throw new Error(classifyHttpStatus(response.status));
+      if (!response.ok) throw new Error(await classifyResponse(response));
       const body = await response.json() as GeminiResponse;
       if (body.usageMetadata) this.onUsage?.({
         inputTokens: body.usageMetadata.promptTokenCount ?? 0,
@@ -73,11 +93,31 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
       return parseDisclosureSummary(parsedJson);
     } catch (error) {
       if (error instanceof SyntaxError) throw new Error("AI_INVALID_RESPONSE");
-      throw error;
+      throw normalizeClientError(error);
     } finally {
       clearTimeout(timeout);
     }
   }
+}
+
+function normalizeClientError(error: unknown): Error {
+  if (error instanceof Error && error.name === "AbortError") return new Error("AI_TIMEOUT");
+  if (error instanceof TypeError) return new Error("AI_PROVIDER_UNAVAILABLE");
+  return error instanceof Error ? error : new Error("AI_UPSTREAM_ERROR");
+}
+
+async function classifyResponse(response: Response): Promise<string> {
+  const body = await response.clone().json().catch(() => null) as GeminiErrorResponse | null;
+  const upstreamStatus = body?.error?.status;
+  const upstreamMessage = body?.error?.message ?? "";
+  if (/api key not valid|api key.*invalid/i.test(upstreamMessage)) return "AI_AUTH_ERROR";
+  if (upstreamStatus === "UNAUTHENTICATED" || upstreamStatus === "PERMISSION_DENIED") return "AI_AUTH_ERROR";
+  if (upstreamStatus === "RESOURCE_EXHAUSTED") return "AI_RATE_LIMITED";
+  if (upstreamStatus === "NOT_FOUND") return "AI_MODEL_NOT_FOUND";
+  if (upstreamStatus === "INVALID_ARGUMENT") return "AI_INVALID_REQUEST";
+  if (upstreamStatus === "DEADLINE_EXCEEDED") return "AI_TIMEOUT";
+  if (upstreamStatus === "UNAVAILABLE" || upstreamStatus === "INTERNAL") return "AI_PROVIDER_UNAVAILABLE";
+  return classifyHttpStatus(response.status);
 }
 
 function classifyHttpStatus(status: number): string {

@@ -73,6 +73,30 @@ describe("GeminiDisclosureSummaryClient", () => {
     await expect(client.summarize(candidate)).rejects.toThrow(code);
   });
 
+  it.each([
+    ["INVALID_ARGUMENT", "API key not valid. Please pass a valid API key.", "AI_AUTH_ERROR"],
+    ["RESOURCE_EXHAUSTED", "Quota exceeded", "AI_RATE_LIMITED"],
+    ["UNAVAILABLE", "Temporary outage", "AI_PROVIDER_UNAVAILABLE"],
+  ])("uses the Gemini error status without exposing its message", async (status, message, code) => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ error: { status, message } }), { status: 400 }));
+    const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
+    await expect(client.summarize(candidate)).rejects.toThrow(code);
+  });
+
+  it("checks model access before a batch starts", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ name: "models/gemini-3.5-flash-lite" }), { status: 200 }));
+    const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
+    await expect(client.assertAvailable()).resolves.toBeUndefined();
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/v1beta/models/gemini-3.5-flash-lite");
+    expect(fetchImpl.mock.calls[0]?.[1]?.method).toBeUndefined();
+  });
+
+  it("fails provider readiness with a safe authentication code", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ error: { status: "INVALID_ARGUMENT", message: "API key not valid" } }), { status: 400 }));
+    const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
+    await expect(client.assertAvailable()).rejects.toThrow("AI_AUTH_ERROR");
+  });
+
   it("caps long filing text before transmission", async () => {
     const fetchImpl: typeof fetch = async (_url, request) => {
       const body = JSON.parse(String(request?.body));
