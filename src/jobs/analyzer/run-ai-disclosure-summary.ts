@@ -11,19 +11,22 @@ async function main() {
   const environment = readAiAnalysisEnvironment();
   let inputTokens = 0;
   let outputTokens = 0;
+  const client = new GeminiDisclosureSummaryClient({
+    apiKey: environment.GEMINI_API_KEY,
+    model: environment.GEMINI_MODEL,
+    onUsage: (usage) => {
+      inputTokens += usage.inputTokens;
+      outputTokens += usage.outputTokens;
+    },
+  });
+  await client.assertAvailable();
+  console.log(`AI 제공자 사전 점검 완료: google/${client.modelName}`);
   const counts = await analyzePendingDisclosures(
     createSupabaseAiAnalysisRepository({
       supabaseUrl: environment.SUPABASE_URL,
       supabaseSecretKey: environment.SUPABASE_SECRET_KEY,
     }),
-    new GeminiDisclosureSummaryClient({
-      apiKey: environment.GEMINI_API_KEY,
-      model: environment.GEMINI_MODEL,
-      onUsage: (usage) => {
-        inputTokens += usage.inputTokens;
-        outputTokens += usage.outputTokens;
-      },
-    }),
+    client,
     {
       limit: environment.AI_ANALYSIS_LIMIT,
       analysisVersion: ANALYSIS_VERSION,
