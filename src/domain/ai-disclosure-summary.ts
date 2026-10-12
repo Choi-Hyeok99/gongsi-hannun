@@ -17,7 +17,7 @@ export type AiDisclosureSummary = Readonly<{
 
 export type AiDisclosureSummaryState =
   | Readonly<{ status: "NOT_GENERATED"; summary: null }>
-  | Readonly<{ status: "PENDING" | "PROCESSING" | "FAILED" | "UNAVAILABLE"; summary: null; updatedAt: string | null }>
+  | Readonly<{ status: "PENDING" | "PROCESSING" | "FAILED" | "UNAVAILABLE"; summary: null; updatedAt: string | null; reason?: "RATE_LIMIT" }>
   | Readonly<{ status: "READY"; summary: AiDisclosureSummary }>;
 
 export type AiAnalysisCandidate = Readonly<{
@@ -58,4 +58,5 @@ export type AiAnalysisCounts = Readonly<{
   succeededCount: number;
   skippedCount: number;
   failedCount: number;
+  deferredCount?: number;
 }>;

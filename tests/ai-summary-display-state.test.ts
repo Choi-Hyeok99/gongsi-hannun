@@ -47,6 +47,10 @@ describe("findAiDisclosureSummaryState", () => {
     await expect(findAiDisclosureSummaryState("202609140001"))
       .resolves.toEqual({ status: "FAILED", summary: null, updatedAt: "2026-09-14T04:20:00Z" });
   });
+  it("displays provider quota exhaustion as waiting, not a bad filing", async () => {
+    database.data=[{status:"FAILED",error_code:"AI_RATE_LIMITED",updated_at:"2026-10-13T00:00:00Z"}];
+    await expect(findAiDisclosureSummaryState("20261013000001")).resolves.toEqual({status:"PENDING",summary:null,updatedAt:"2026-10-13T00:00:00Z",reason:"RATE_LIMIT"});
+  });
 
   it("returns only stored fields from a successful analysis", async () => {
     database.data = [{

@@ -195,7 +195,9 @@ function getFactKindLabel(kind: DisclosureFactKind): string {
 
 function AiSummaryStatus(props: Props) {
   const status = props.state.status === "READY" ? "NOT_GENERATED" : props.state.status;
-  const content = status === "NOT_GENERATED" && props.documentStatus && props.documentStatus !== "READY"
+  const content = "reason" in props.state && props.state.reason === "RATE_LIMIT" ? {
+    badge:"무료 한도 대기",title:"무료 AI 호출 한도가 초기화되면 이어서 준비합니다.",description:"공시나 원문의 오류가 아닙니다. 자동으로 유료 전환하지 않으며, 원문과 제출 문서는 지금 확인할 수 있습니다.",
+  } : status === "NOT_GENERATED" && props.documentStatus && props.documentStatus !== "READY"
     ? getDocumentPendingContent(props.documentStatus)
     : STATUS_CONTENT[status];
   const updatedAt = "updatedAt" in props.state ? props.state.updatedAt : null;
@@ -219,7 +221,7 @@ const STATUS_CONTENT = {
   NOT_GENERATED: {
     badge: "요약 대기",
     title: "AI 요약을 순차적으로 준비합니다.",
-    description: "공시 원문이 준비된 공개 공시부터 차례로 요약합니다. 아래 제출 문서와 OpenDART 원문은 바로 확인할 수 있습니다.",
+    description: "모든 공개 공시 유형을 대상으로, 개인정보 없이 확인할 수 있는 기업 사실을 무료 한도 내에서 순차 분석합니다. 근거가 부족하면 요약을 만들지 않으며, 아래 제출 문서와 OpenDART 원문은 바로 확인할 수 있습니다.",
   },
   PENDING: {
     badge: "준비 예정",
