@@ -3,7 +3,7 @@ import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-ca
 import { readAiAnalysisEnvironment } from "@/server/ai-env";
 import { GeminiDisclosureSummaryClient } from "./gemini-summary-client";
 
-const ANALYSIS_VERSION = "disclosure-summary-v3-corporate-facts";
+const ANALYSIS_VERSION = "disclosure-summary-v4-all-types-safe-facts";
 const GEMINI_INPUT_USD_PER_MILLION_TOKENS = 0.3;
 const GEMINI_OUTPUT_USD_PER_MILLION_TOKENS = 2.5;
 
@@ -36,7 +36,7 @@ async function main() {
       limit: environment.AI_ANALYSIS_LIMIT,
       analysisVersion: ANALYSIS_VERSION,
       concurrency: 1,
-      batchDelayMs: 3_500,
+      batchDelayMs: 10_000,
     },
   );
   const estimatedCostUsd = (
@@ -44,6 +44,7 @@ async function main() {
     + outputTokens * GEMINI_OUTPUT_USD_PER_MILLION_TOKENS
   ) / 1_000_000;
   console.log(`AI 공시 요약 완료: 대상 ${counts.readCount}, 성공 ${counts.succeededCount}, 건너뜀 ${counts.skippedCount}, 실패 ${counts.failedCount}`);
+  if (counts.deferredCount) console.log(`AI 무료 한도 대기: ${counts.deferredCount}건. 다음 한도 초기화 이후 순차 재개하며 유료 API로 전환하지 않습니다.`);
   console.log(`AI 사용량: 입력 ${inputTokens} 토큰, 출력 ${outputTokens} 토큰, 유료 기준 예상 비용 $${estimatedCostUsd.toFixed(6)}`);
   if (counts.failedCount > 0) process.exitCode = 1;
 }
