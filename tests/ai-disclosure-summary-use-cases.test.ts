@@ -17,7 +17,7 @@ function repository(overrides: Partial<AiAnalysisRepository> = {}): AiAnalysisRe
 }
 
 describe("analyzePendingDisclosures", () => {
-  it.each(["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_RATE_LIMITED"])("stops a sequential batch after systemic failure %s", async (code) => {
+  it.each(["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_BILLING_REQUIRED", "AI_RATE_LIMITED"])("stops a sequential batch after systemic failure %s", async (code) => {
     const repo = repository({findCandidates:vi.fn(async()=>Array.from({length:3},(_,index)=>({...candidate,eventId:`event-${index}`})))});
     const provider: AiDisclosureSummaryProvider = {providerName:"google",modelName:"gemini",summarize:vi.fn(async()=>{throw new Error(code);})};
     const result = await analyzePendingDisclosures(repo,provider,{limit:3,analysisVersion:"v1",concurrency:1});

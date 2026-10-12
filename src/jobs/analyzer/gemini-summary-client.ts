@@ -117,6 +117,8 @@ function normalizeClientError(error: unknown): Error {
 }
 
 async function classifyResponse(response: Response): Promise<string> {
+  // Payment failures must not be mistaken for retryable RESOURCE_EXHAUSTED responses.
+  if (response.status === 402) return "AI_BILLING_REQUIRED";
   const body = await response.clone().json().catch(() => null) as GeminiErrorResponse | null;
   const upstreamStatus = body?.error?.status;
   const upstreamMessage = body?.error?.message ?? "";

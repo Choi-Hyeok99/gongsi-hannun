@@ -195,7 +195,7 @@ function toCandidate(
 
 function isRetryableAnalysisState(state: Readonly<{ status: string; attemptCount: number; errorCode: string }>): boolean {
   if (state.status !== "FAILED") return false;
-  if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND"].includes(state.errorCode)) return false;
+  if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_BILLING_REQUIRED"].includes(state.errorCode)) return false;
   if (state.errorCode === "AI_RATE_LIMITED") return state.attemptCount < 4;
   // Legacy clients collapsed provider failures into this code. Permit one classified recovery attempt.
   if (state.errorCode === "AI_UPSTREAM_ERROR") return state.attemptCount < 4;

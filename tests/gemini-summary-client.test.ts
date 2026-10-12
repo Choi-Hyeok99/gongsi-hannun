@@ -64,6 +64,7 @@ describe("GeminiDisclosureSummaryClient", () => {
 
   it.each([
     [401, "AI_AUTH_ERROR"],
+    [402, "AI_BILLING_REQUIRED"],
     [404, "AI_MODEL_NOT_FOUND"],
     [429, "AI_RATE_LIMITED"],
     [503, "AI_PROVIDER_UNAVAILABLE"],
@@ -100,6 +101,11 @@ describe("GeminiDisclosureSummaryClient", () => {
     await expect(client.summarize(candidate)).rejects.toThrow("AI_RATE_LIMITED");
     expect(onFailure).toHaveBeenCalledWith({code:"AI_RATE_LIMITED",httpStatus:429});
     expect(JSON.stringify(onFailure.mock.calls)).not.toContain("credential");
+  });
+
+  it("classifies HTTP 402 as a billing failure even with RESOURCE_EXHAUSTED in the body", async () => {
+    const client = new GeminiDisclosureSummaryClient({apiKey:"secret-api-key-value-123",fetchImpl:async()=>new Response(JSON.stringify({error:{status:"RESOURCE_EXHAUSTED"}}),{status:402})});
+    await expect(client.summarize(candidate)).rejects.toThrow("AI_BILLING_REQUIRED");
   });
 
   it("includes thinking tokens in billable output usage", async () => {

@@ -45,7 +45,7 @@ export async function analyzePendingDisclosures(
       } catch (error) {
         const code = classifyAnalysisError(error);
         await repository.fail(candidate.eventId, options.analysisVersion, code);
-        if (["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_RATE_LIMITED", "AI_PROVIDER_UNAVAILABLE"].includes(code)) providerBlocked = true;
+        if (["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_BILLING_REQUIRED", "AI_RATE_LIMITED", "AI_PROVIDER_UNAVAILABLE"].includes(code)) providerBlocked = true;
         failedCount += 1;
       }
     }));
@@ -71,6 +71,7 @@ const SAFE_ANALYSIS_ERROR_CODES = new Set([
   "AI_INVALID_RESPONSE",
   "AI_INVALID_REQUEST",
   "AI_AUTH_ERROR",
+  "AI_BILLING_REQUIRED",
   "AI_MODEL_NOT_FOUND",
   "AI_TIMEOUT",
   "AI_RATE_LIMITED",

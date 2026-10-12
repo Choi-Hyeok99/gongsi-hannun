@@ -127,7 +127,7 @@ jobs:
 
   summarize:
     needs: collect
-    if: always() && !cancelled()
+    if: always() && !cancelled() && (github.event_name == 'workflow_dispatch' || vars.AI_SUMMARIES_ENABLED != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
