@@ -135,7 +135,7 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: gemini-3.5-flash-lite
-      AI_ANALYSIS_LIMIT: ${{ inputs.mode == 'ai_only' && inputs.analysis_limit || '200' }}
+      AI_ANALYSIS_LIMIT: ${{ inputs.mode != 'collect' && inputs.analysis_limit || '200' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
