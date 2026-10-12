@@ -8,9 +8,9 @@ const candidate: AiAnalysisCandidate = {
   companyName: "테스트기업",
   reportName: "사업보고서",
   disclosedOn: "2026-09-11",
-  eventType: "MATERIAL_DISCLOSURE",
+  eventType: "EARNINGS",
   ruleImportanceScore: 70,
-  contentText: "매출액과 영업이익 관련 공시 원문입니다.",
+  contentText: "매출액 100억원 영업이익 10억원",
   inputHash: "a".repeat(64),
   sourceDocument: { id: "document-1", title: "주요 문서", kind: "MAIN", contentHash: "b".repeat(64) },
 };
@@ -128,10 +128,10 @@ describe("GeminiDisclosureSummaryClient", () => {
     const fetchImpl: typeof fetch = async (_url, request) => {
       const body = JSON.parse(String(request?.body));
       expect(body.contents[0].parts[0].text.length).toBeLessThan(16_000);
-      expect(body.contents[0].parts[0].text).toContain("[중간 내용 생략]");
+      expect(body.contents[0].parts[0].text).not.toContain("가가가");
       return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(validSummary) }] } }] }), { status: 200 });
     };
     const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
-    await client.summarize({ ...candidate, contentText: "가".repeat(50_000) });
+    await client.summarize({ ...candidate, contentText: "가".repeat(50_000)+" 매출액 100억원" });
   });
 });

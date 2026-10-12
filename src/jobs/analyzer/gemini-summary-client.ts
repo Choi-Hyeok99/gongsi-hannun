@@ -3,8 +3,8 @@ import type {
   AiDisclosureSummaryProvider,
   GeneratedAiDisclosureSummaryCandidate,
 } from "@/domain/ai-disclosure-summary";
+import { buildCorporateAiPrompt } from "@/domain/corporate-ai-input";
 import {
-  buildDisclosureSummaryPrompt,
   DISCLOSURE_SUMMARY_JSON_SCHEMA,
   DISCLOSURE_SUMMARY_MAX_OUTPUT_TOKENS,
   DISCLOSURE_SUMMARY_SYSTEM_INSTRUCTION,
@@ -147,7 +147,7 @@ function buildRequest(candidate: AiAnalysisCandidate) {
     systemInstruction: {
       parts: [{ text: DISCLOSURE_SUMMARY_SYSTEM_INSTRUCTION }],
     },
-    contents: [{ role: "user", parts: [{ text: buildDisclosureSummaryPrompt(candidate) }] }],
+    contents: [{ role: "user", parts: [{ text: buildCorporateAiPrompt(candidate) }] }],
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: DISCLOSURE_SUMMARY_MAX_OUTPUT_TOKENS,

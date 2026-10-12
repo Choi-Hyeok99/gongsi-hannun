@@ -3,7 +3,7 @@ import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-ca
 import { readAiAnalysisEnvironment } from "@/server/ai-env";
 import { GeminiDisclosureSummaryClient } from "./gemini-summary-client";
 
-const ANALYSIS_VERSION = "disclosure-summary-v2-verified-facts";
+const ANALYSIS_VERSION = "disclosure-summary-v3-corporate-facts";
 const GEMINI_INPUT_USD_PER_MILLION_TOKENS = 0.3;
 const GEMINI_OUTPUT_USD_PER_MILLION_TOKENS = 2.5;
 
@@ -29,6 +29,7 @@ async function main() {
     createSupabaseAiAnalysisRepository({
       supabaseUrl: environment.SUPABASE_URL,
       supabaseSecretKey: environment.SUPABASE_SECRET_KEY,
+      corporateFactsOnly: true,
     }),
     client,
     {
