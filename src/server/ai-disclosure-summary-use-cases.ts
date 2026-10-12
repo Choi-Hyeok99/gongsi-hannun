@@ -21,6 +21,7 @@ export async function analyzePendingDisclosures(
   let failedCount = 0;
   const concurrency = Math.max(1, Math.min(5, Math.trunc(options.concurrency ?? 3)));
   const batchDelayMs = Math.max(0, Math.min(10_000, Math.trunc(options.batchDelayMs ?? 0)));
+  let providerBlocked = false;
 
   for (let index = 0; index < candidates.length; index += concurrency) {
     await Promise.all(candidates.slice(index, index + concurrency).map(async (candidate) => {
@@ -42,10 +43,16 @@ export async function analyzePendingDisclosures(
         await repository.complete(candidate.eventId, options.analysisVersion, provider, summary);
         succeededCount += 1;
       } catch (error) {
-        await repository.fail(candidate.eventId, options.analysisVersion, classifyAnalysisError(error));
+        const code = classifyAnalysisError(error);
+        await repository.fail(candidate.eventId, options.analysisVersion, code);
+        if (["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_BILLING_REQUIRED", "AI_RATE_LIMITED", "AI_PROVIDER_UNAVAILABLE"].includes(code)) providerBlocked = true;
         failedCount += 1;
       }
     }));
+    if (providerBlocked) {
+      skippedCount += candidates.length - Math.min(candidates.length, index + concurrency);
+      break;
+    }
     if (batchDelayMs > 0 && index + concurrency < candidates.length) {
       await new Promise((resolve) => setTimeout(resolve, batchDelayMs));
     }
@@ -62,8 +69,10 @@ function classifyAnalysisError(error: unknown): string {
 
 const SAFE_ANALYSIS_ERROR_CODES = new Set([
   "AI_INVALID_RESPONSE",
+  "AI_NO_SAFE_INPUT",
   "AI_INVALID_REQUEST",
   "AI_AUTH_ERROR",
+  "AI_BILLING_REQUIRED",
   "AI_MODEL_NOT_FOUND",
   "AI_TIMEOUT",
   "AI_RATE_LIMITED",

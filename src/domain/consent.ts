@@ -1,6 +1,6 @@
 export const REQUIRED_POLICY_VERSIONS = {
-  TERMS: "2026-09-26",
-  PRIVACY: "2026-09-26",
+  TERMS: "2026-10-12",
+  PRIVACY: "2026-10-12",
 } as const;
 
 export type RequiredPolicyType = keyof typeof REQUIRED_POLICY_VERSIONS;

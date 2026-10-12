@@ -17,6 +17,14 @@ function repository(overrides: Partial<AiAnalysisRepository> = {}): AiAnalysisRe
 }
 
 describe("analyzePendingDisclosures", () => {
+  it.each(["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_BILLING_REQUIRED", "AI_RATE_LIMITED"])("stops a sequential batch after systemic failure %s", async (code) => {
+    const repo = repository({findCandidates:vi.fn(async()=>Array.from({length:3},(_,index)=>({...candidate,eventId:`event-${index}`})))});
+    const provider: AiDisclosureSummaryProvider = {providerName:"google",modelName:"gemini",summarize:vi.fn(async()=>{throw new Error(code);})};
+    const result = await analyzePendingDisclosures(repo,provider,{limit:3,analysisVersion:"v1",concurrency:1});
+    expect(result).toEqual({readCount:3,succeededCount:0,skippedCount:2,failedCount:1});
+    expect(provider.summarize).toHaveBeenCalledTimes(1);
+    expect(repo.begin).toHaveBeenCalledTimes(1);
+  });
   it("stores a successful structured summary", async () => {
     const repo = repository();
     const provider: AiDisclosureSummaryProvider = { providerName: "google", modelName: "gemini-2.5-flash-lite", summarize: vi.fn(async () => summary) };

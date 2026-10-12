@@ -17,6 +17,8 @@
     "send:web-push": "tsx --env-file=.env.local src/jobs/collector/run-web-push-delivery.ts",
     "analyze:disclosures": "tsx --env-file=.env.local src/jobs/analyzer/run-ai-disclosure-summary.ts",
     "compare:ai-providers": "tsx src/jobs/analyzer/run-ai-provider-comparison.ts",
+    "verify:user-lifecycle": "tsx --env-file=.env.local src/jobs/launch/verify-user-lifecycle.ts",
+    "verify:launch-readiness": "tsx --env-file-if-exists=.env.local src/jobs/launch/verify-launch-readiness.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

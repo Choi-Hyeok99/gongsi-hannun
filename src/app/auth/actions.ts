@@ -56,11 +56,12 @@ export async function signUp(formData: FormData) {
   if (!parsed.success) redirectWithMessage("/signup", "error", parsed.message);
 
   const supabase = await createSupabaseServerClient();
+  const next = safeRedirectPath(formData.get("next")?.toString() ?? null);
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${readSiteUrl()}/auth/callback`,
+      emailRedirectTo: buildAuthCallbackUrl(readSiteUrl(), next),
       data: {
         terms_accepted_version: REQUIRED_POLICY_VERSIONS.TERMS,
         privacy_accepted_version: REQUIRED_POLICY_VERSIONS.PRIVACY,

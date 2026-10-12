@@ -29,7 +29,6 @@ export default async function ConsentPage({ searchParams }: Props) {
           <h1 id="consent-heading">필수 동의</h1>
           <p className="auth-description">계정을 계속 사용하려면 연령과 정책을 확인해 주세요. 선택 광고·마케팅 동의는 포함되지 않습니다.</p>
           <AuthMessage error={parameters.error} />
-          <p className="policy-draft-notice" role="note">정책의 운영자 정보 등 미확정 항목은 정식 공개 전 확정 필요합니다.</p>
           <form action={acceptRequiredPolicies} className="auth-form">
             <input type="hidden" name="next" value={safeRedirectPath(parameters.next ?? null)} />
             <fieldset className="policy-consents">

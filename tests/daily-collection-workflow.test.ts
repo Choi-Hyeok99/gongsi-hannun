@@ -24,8 +24,10 @@ describe("daily market data workflow", () => {
   });
 
   it("runs a bounded AI backfill after both scheduled collections", () => {
-    expect(workflow).toContain("github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'");
-    expect(workflow).toContain('AI_ANALYSIS_LIMIT: "200"');
+    expect(workflow).toContain("vars.AI_SUMMARIES_ENABLED != 'false'");
+    expect(workflow).toContain("inputs.analysis_limit || vars.AI_ANALYSIS_LIMIT || '10'");
+    expect(workflow).toContain("run-ai-disclosure-summary.ts --probe");
+    expect(workflow).toContain("if: always() && !cancelled()");
     expect(workflow).toContain("timeout-minutes: 60");
   });
 

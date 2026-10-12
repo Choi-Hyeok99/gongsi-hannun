@@ -3,7 +3,7 @@ import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-ca
 import { readAiAnalysisEnvironment } from "@/server/ai-env";
 import { GeminiDisclosureSummaryClient } from "./gemini-summary-client";
 
-const ANALYSIS_VERSION = "disclosure-summary-v2-verified-facts";
+const ANALYSIS_VERSION = "disclosure-summary-v3-corporate-facts";
 const GEMINI_INPUT_USD_PER_MILLION_TOKENS = 0.3;
 const GEMINI_OUTPUT_USD_PER_MILLION_TOKENS = 2.5;
 
@@ -11,19 +11,27 @@ async function main() {
   const environment = readAiAnalysisEnvironment();
   let inputTokens = 0;
   let outputTokens = 0;
+  const client = new GeminiDisclosureSummaryClient({
+    apiKey: environment.GEMINI_API_KEY,
+    model: environment.GEMINI_MODEL,
+    onFailure: ({ code, httpStatus }) => console.error(
+      `AI 제공자 진단: ${code} (HTTP ${httpStatus})`,
+    ),
+    onUsage: (usage) => {
+      inputTokens += usage.inputTokens;
+      outputTokens += usage.outputTokens;
+    },
+  });
+  await client.assertAvailable();
+  console.log(`AI 제공자 사전 점검 완료: google/${client.modelName}`);
+  if (process.argv.includes("--probe")) return;
   const counts = await analyzePendingDisclosures(
     createSupabaseAiAnalysisRepository({
       supabaseUrl: environment.SUPABASE_URL,
       supabaseSecretKey: environment.SUPABASE_SECRET_KEY,
+      corporateFactsOnly: true,
     }),
-    new GeminiDisclosureSummaryClient({
-      apiKey: environment.GEMINI_API_KEY,
-      model: environment.GEMINI_MODEL,
-      onUsage: (usage) => {
-        inputTokens += usage.inputTokens;
-        outputTokens += usage.outputTokens;
-      },
-    }),
+    client,
     {
       limit: environment.AI_ANALYSIS_LIMIT,
       analysisVersion: ANALYSIS_VERSION,

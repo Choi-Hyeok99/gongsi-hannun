@@ -36,13 +36,20 @@ describe("account and policy UI", () => {
     expect(readFileSync("src/components/SiteHeader.tsx", "utf8")).toContain('<Link href="/account">내 정보</Link>');
   });
 
-  it("marks unresolved legal details as pre-release requirements", () => {
+  it("publishes confirmed contact details and discloses actual storage and guest cookies", () => {
     const terms = renderToStaticMarkup(<TermsPage />);
     const privacy = renderToStaticMarkup(<PrivacyPage />);
-    expect(terms).toContain("운영자명");
-    expect(terms).toContain("정식 공개 전 확정 필요");
-    expect(privacy).toContain("국외이전");
-    expect(privacy).toContain("정식 공개 전 확정 필요");
+    for (const markup of [terms, privacy]) {
+      expect(markup).toContain("최혁");
+      expect(markup).toContain("gur0709@naver.com");
+      expect(markup).toContain("2026-10-12");
+      expect(markup).not.toMatch(/검토 초안|확정 필요|미확정/);
+    }
+    expect(terms).toContain("고의·중대한 과실");
+    expect(privacy).toContain("ap-northeast-2");
+    expect(privacy).toContain("국외 처리");
+    expect(privacy).toContain("gongsi-ai-preview");
+    expect(privacy).toContain("180일");
   });
 
   it("requires age, terms agreement, and privacy acknowledgement in email signup and consent", async () => {
@@ -54,7 +61,15 @@ describe("account and policy UI", () => {
       expect(markup).toContain('name="ageConfirmed"');
       expect(markup.match(/type="checkbox"[^>]*required=""/g)).toHaveLength(3);
       expect(markup).not.toContain("개인정보 처리방침</a>을 확인하고 동의합니다");
+      expect(markup).not.toMatch(/확정 필요|미확정/);
     }
+  });
+
+  it("keeps the selected disclosure return path for email and Kakao signup", async () => {
+    const markup = renderToStaticMarkup(await SignUpPage({ searchParams: Promise.resolve({next: "/disclosures/20260923800549"}) }));
+    expect(markup.match(/name="next" value="\/disclosures\/20260923800549"/g)).toHaveLength(2);
+    const invalid = renderToStaticMarkup(await SignUpPage({ searchParams: Promise.resolve({next: "https://evil.invalid"}) }));
+    expect(invalid).not.toContain("evil.invalid");
   });
 
   it("shows own account counts and a deliberate deletion confirmation", async () => {
