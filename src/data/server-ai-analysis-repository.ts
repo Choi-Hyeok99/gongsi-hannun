@@ -20,6 +20,7 @@ export function createAiAnalysisRepository(): AiAnalysisRepository {
 
 type AiAnalysisRow = Readonly<{
   status: unknown;
+  error_code?: unknown;
   plain_summary: unknown;
   why_it_matters: unknown;
   checkpoints: unknown;
@@ -37,7 +38,7 @@ export async function findAiDisclosureSummaryState(receiptNumber: string): Promi
   });
   const { data, error } = await client
     .from("ai_analyses")
-    .select("status,plain_summary,why_it_matters,checkpoints,cautions,extracted_facts,ai_importance_score,generated_at,updated_at,events!inner(source_disclosures!inner(receipt_no))")
+    .select("status,error_code,plain_summary,why_it_matters,checkpoints,cautions,extracted_facts,ai_importance_score,generated_at,updated_at,events!inner(source_disclosures!inner(receipt_no))")
     .eq("events.source_disclosures.receipt_no", receiptNumber)
     .order("updated_at", { ascending: false })
     .limit(20);
@@ -49,6 +50,7 @@ export async function findAiDisclosureSummaryState(receiptNumber: string): Promi
 
   const latestStatus = rows[0]?.status;
   const updatedAt = optionalTimestamp(rows[0]?.updated_at);
+  if (latestStatus === "FAILED" && rows[0]?.error_code === "AI_RATE_LIMITED") return {status:"PENDING",summary:null,updatedAt,reason:"RATE_LIMIT"};
   if (latestStatus === "PENDING") return { status: "PENDING", summary: null, updatedAt };
   if (latestStatus === "PROCESSING") return { status: "PROCESSING", summary: null, updatedAt };
   if (latestStatus === "FAILED") return { status: "FAILED", summary: null, updatedAt };
