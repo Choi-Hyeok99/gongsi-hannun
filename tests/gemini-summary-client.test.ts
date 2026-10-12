@@ -8,9 +8,9 @@ const candidate: AiAnalysisCandidate = {
   companyName: "테스트기업",
   reportName: "사업보고서",
   disclosedOn: "2026-09-11",
-  eventType: "MATERIAL_DISCLOSURE",
+  eventType: "EARNINGS",
   ruleImportanceScore: 70,
-  contentText: "매출액과 영업이익 관련 공시 원문입니다.",
+  contentText: "매출액 100억원 영업이익 10억원",
   inputHash: "a".repeat(64),
   sourceDocument: { id: "document-1", title: "주요 문서", kind: "MAIN", contentHash: "b".repeat(64) },
 };
@@ -64,6 +64,7 @@ describe("GeminiDisclosureSummaryClient", () => {
 
   it.each([
     [401, "AI_AUTH_ERROR"],
+    [402, "AI_BILLING_REQUIRED"],
     [404, "AI_MODEL_NOT_FOUND"],
     [429, "AI_RATE_LIMITED"],
     [503, "AI_PROVIDER_UNAVAILABLE"],
@@ -91,6 +92,32 @@ describe("GeminiDisclosureSummaryClient", () => {
     expect(fetchImpl.mock.calls[0]?.[1]?.method).toBeUndefined();
   });
 
+  it("reports the HTTP status without copying sensitive upstream text", async () => {
+    const onFailure = vi.fn();
+    const client = new GeminiDisclosureSummaryClient({
+      apiKey: "secret-api-key-value-123", onFailure,
+      fetchImpl: async () => new Response(JSON.stringify({error:{status:"RESOURCE_EXHAUSTED",message:"credential=do-not-log"}}),{status:429}),
+    });
+    await expect(client.summarize(candidate)).rejects.toThrow("AI_RATE_LIMITED");
+    expect(onFailure).toHaveBeenCalledWith({code:"AI_RATE_LIMITED",httpStatus:429});
+    expect(JSON.stringify(onFailure.mock.calls)).not.toContain("credential");
+  });
+
+  it("classifies HTTP 402 as a billing failure even with RESOURCE_EXHAUSTED in the body", async () => {
+    const client = new GeminiDisclosureSummaryClient({apiKey:"secret-api-key-value-123",fetchImpl:async()=>new Response(JSON.stringify({error:{status:"RESOURCE_EXHAUSTED"}}),{status:402})});
+    await expect(client.summarize(candidate)).rejects.toThrow("AI_BILLING_REQUIRED");
+  });
+
+  it("includes thinking tokens in billable output usage", async () => {
+    const onUsage = vi.fn();
+    const client = new GeminiDisclosureSummaryClient({
+      apiKey: "secret-api-key-value-123", onUsage,
+      fetchImpl: async () => new Response(JSON.stringify({candidates:[{content:{parts:[{text:JSON.stringify(validSummary)}]}}],usageMetadata:{promptTokenCount:100,candidatesTokenCount:40,totalTokenCount:200}}),{status:200}),
+    });
+    await client.summarize(candidate);
+    expect(onUsage).toHaveBeenCalledWith({inputTokens:100,outputTokens:100,totalTokens:200});
+  });
+
   it("fails provider readiness with a safe authentication code", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ error: { status: "INVALID_ARGUMENT", message: "API key not valid" } }), { status: 400 }));
     const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
@@ -101,10 +128,10 @@ describe("GeminiDisclosureSummaryClient", () => {
     const fetchImpl: typeof fetch = async (_url, request) => {
       const body = JSON.parse(String(request?.body));
       expect(body.contents[0].parts[0].text.length).toBeLessThan(16_000);
-      expect(body.contents[0].parts[0].text).toContain("[중간 내용 생략]");
+      expect(body.contents[0].parts[0].text).not.toContain("가가가");
       return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(validSummary) }] } }] }), { status: 200 });
     };
     const client = new GeminiDisclosureSummaryClient({ apiKey: "secret-api-key-value-123", fetchImpl });
-    await client.summarize({ ...candidate, contentText: "가".repeat(50_000) });
+    await client.summarize({ ...candidate, contentText: "가".repeat(50_000)+" 매출액 100억원" });
   });
 });

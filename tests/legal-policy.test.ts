@@ -18,10 +18,12 @@ const completeEnvironment: Record<string, string> = {
 };
 
 describe("legal policy configuration", () => {
-  it("lists every unresolved publication fact instead of inventing it", () => {
+  it("uses confirmed operator facts without inventing provider or license facts", () => {
     const config = readLegalPolicyConfig({});
     expect(isLegalPolicyReady(config)).toBe(false);
-    expect(missingLegalPolicyFields(config)).toContain("운영자명 또는 사업자명");
+    expect(config.operatorName).toBe("최혁");
+    expect(config.privacyEmail).toBe("gur0709@naver.com");
+    expect(config.effectiveDate).toBe("2026-10-12");
     expect(missingLegalPolicyFields(config)).toContain("KRX 데이터 공개 이용 근거");
   });
 

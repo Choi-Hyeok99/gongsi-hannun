@@ -7,19 +7,21 @@ import type {
   AiDisclosureSummaryProvider,
   GeneratedAiDisclosureSummary,
 } from "@/domain/ai-disclosure-summary";
-import { isDisclosureEventType } from "@/domain/disclosure-classification";
+import { DISCLOSURE_EVENT_TYPES, isDisclosureEventType } from "@/domain/disclosure-classification";
 import { readVerifiedDisclosureFacts } from "@/domain/ai-disclosure-facts";
 import { DataAccessError } from "@/domain/errors";
+import { CORPORATE_AI_EVENT_TYPES, corporateAiInput } from "@/domain/corporate-ai-input";
 
 type RepositoryOptions = Readonly<{
   supabaseUrl: string;
   supabaseSecretKey: string;
+  corporateFactsOnly?: boolean;
 }>;
 
 type JsonObject = Record<string, unknown>;
 
 export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(private readonly client: SupabaseClient, private readonly corporateFactsOnly = false) {}
 
   async findCandidates(limit: number, analysisVersion: string): Promise<readonly AiAnalysisCandidate[]> {
     const candidates: AiAnalysisCandidate[] = [];
@@ -30,6 +32,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
         .from("events")
         .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,title,document_kind,sequence_no,content_text,content_hash))")
         .eq("visibility", "PUBLIC")
+        .in("event_type", this.corporateFactsOnly ? [...CORPORATE_AI_EVENT_TYPES] : [...DISCLOSURE_EVENT_TYPES])
         .order("occurred_on", { ascending: false })
         .order("rule_importance_score", { ascending: false })
         .range(offset, offset + pageSize - 1);
@@ -40,7 +43,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       const existing = await this.findExistingStates(rows.map((row) => String(row.id)), analysisVersion);
       for (const row of rows) {
         const candidate = toCandidate(row, analysisVersion, existing);
-        if (candidate) candidates.push(candidate);
+        if (candidate && (!this.corporateFactsOnly || corporateAiInput(candidate))) candidates.push(candidate);
         if (candidates.length >= limit) break;
       }
       if (rows.length < pageSize) break;
@@ -141,13 +144,17 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   private async findExistingStates(eventIds: readonly string[], analysisVersion: string) {
     const states = new Map<string, Readonly<{ status: string; attemptCount: number; errorCode: string }>>();
     if (eventIds.length === 0) return states;
-    const { data, error } = await this.client.from("ai_analyses").select("event_id,status,attempt_count,error_code").eq("analysis_version", analysisVersion).in("event_id", eventIds);
+    const { data, error } = await this.client.from("ai_analyses").select("event_id,analysis_version,status,attempt_count,error_code").in("event_id", eventIds);
     if (error) throw new DataAccessError("기존 AI 분석 상태를 조회하지 못했습니다.");
-    for (const row of data ?? []) states.set(String(row.event_id), {
+    for (const row of data ?? []) {
+      if (states.get(String(row.event_id))?.status === "SUCCEEDED") continue;
+      if (row.analysis_version !== analysisVersion && row.status !== "SUCCEEDED") continue;
+      states.set(String(row.event_id), {
       status: String(row.status),
       attemptCount: Number(row.attempt_count),
       errorCode: String(row.error_code ?? ""),
-    });
+      });
+    }
     return states;
   }
 }
@@ -195,15 +202,17 @@ function toCandidate(
 
 function isRetryableAnalysisState(state: Readonly<{ status: string; attemptCount: number; errorCode: string }>): boolean {
   if (state.status !== "FAILED") return false;
-  if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND"].includes(state.errorCode)) return false;
+  if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_BILLING_REQUIRED"].includes(state.errorCode)) return false;
   if (state.errorCode === "AI_RATE_LIMITED") return state.attemptCount < 4;
+  // Legacy clients collapsed provider failures into this code. Permit one classified recovery attempt.
+  if (state.errorCode === "AI_UPSTREAM_ERROR") return state.attemptCount < 4;
   return state.attemptCount < 2;
 }
 
 export function createSupabaseAiAnalysisRepository(options: RepositoryOptions): AiAnalysisRepository {
   return new SupabaseAiAnalysisRepository(createClient(options.supabaseUrl, options.supabaseSecretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
-  }));
+  }), options.corporateFactsOnly);
 }
 
 function objectArray(value: unknown): JsonObject[] {

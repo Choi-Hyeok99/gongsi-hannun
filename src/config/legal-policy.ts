@@ -40,19 +40,19 @@ export const LEGAL_POLICY_FIELD_LABELS: Readonly<Record<keyof LegalPolicyConfig,
 
 export function readLegalPolicyConfig(environment: Readonly<Record<string, string | undefined>> = process.env): LegalPolicyConfig {
   return schema.parse({
-    operatorName: environment.LEGAL_OPERATOR_NAME,
+    operatorName: environment.LEGAL_OPERATOR_NAME ?? "최혁",
     operatorAddress: environment.LEGAL_OPERATOR_ADDRESS,
-    supportEmail: environment.LEGAL_SUPPORT_EMAIL,
-    privacyEmail: environment.LEGAL_PRIVACY_EMAIL,
-    privacyOfficer: environment.LEGAL_PRIVACY_OFFICER,
-    effectiveDate: environment.LEGAL_EFFECTIVE_DATE,
+    supportEmail: environment.LEGAL_SUPPORT_EMAIL ?? "gur0709@naver.com",
+    privacyEmail: environment.LEGAL_PRIVACY_EMAIL ?? "gur0709@naver.com",
+    privacyOfficer: environment.LEGAL_PRIVACY_OFFICER ?? "최혁",
+    effectiveDate: environment.LEGAL_EFFECTIVE_DATE ?? "2026-10-12",
     backupRetention: environment.LEGAL_BACKUP_RETENTION,
     supabaseProcessing: environment.LEGAL_SUPABASE_PROCESSING,
     cloudflareProcessing: environment.LEGAL_CLOUDFLARE_PROCESSING,
     geminiProcessing: environment.LEGAL_GEMINI_PROCESSING,
     kakaoDataFields: environment.LEGAL_KAKAO_DATA_FIELDS,
     krxUsageBasis: environment.LEGAL_KRX_USAGE_BASIS,
-    changeNoticeDays: environment.LEGAL_CHANGE_NOTICE_DAYS,
+    changeNoticeDays: environment.LEGAL_CHANGE_NOTICE_DAYS ?? "7",
   });
 }
 

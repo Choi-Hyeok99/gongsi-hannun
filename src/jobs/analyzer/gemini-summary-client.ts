@@ -3,8 +3,8 @@ import type {
   AiDisclosureSummaryProvider,
   GeneratedAiDisclosureSummaryCandidate,
 } from "@/domain/ai-disclosure-summary";
+import { buildCorporateAiPrompt } from "@/domain/corporate-ai-input";
 import {
-  buildDisclosureSummaryPrompt,
   DISCLOSURE_SUMMARY_JSON_SCHEMA,
   DISCLOSURE_SUMMARY_MAX_OUTPUT_TOKENS,
   DISCLOSURE_SUMMARY_SYSTEM_INSTRUCTION,
@@ -26,6 +26,7 @@ type GeminiErrorResponse = Readonly<{
 }>;
 
 export type AiProviderUsage = Readonly<{ inputTokens: number; outputTokens: number; totalTokens: number }>;
+export type AiProviderFailure = Readonly<{ code: string; httpStatus: number }>;
 
 type Options = Readonly<{
   apiKey: string;
@@ -33,6 +34,7 @@ type Options = Readonly<{
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   onUsage?: (usage: AiProviderUsage) => void;
+  onFailure?: (failure: AiProviderFailure) => void;
 }>;
 
 export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvider {
@@ -42,6 +44,7 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
   private readonly onUsage?: (usage: AiProviderUsage) => void;
+  private readonly onFailure?: (failure: AiProviderFailure) => void;
 
   constructor(options: Options) {
     this.apiKey = options.apiKey;
@@ -49,6 +52,7 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
     this.onUsage = options.onUsage;
+    this.onFailure = options.onFailure;
   }
 
   async assertAvailable(): Promise<void> {
@@ -59,7 +63,7 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.modelName)}`,
         { headers: { "x-goog-api-key": this.apiKey }, signal: controller.signal },
       );
-      if (!response.ok) throw new Error(await classifyResponse(response));
+      if (!response.ok) await this.rejectResponse(response);
     } catch (error) {
       throw normalizeClientError(error);
     } finally {
@@ -80,11 +84,11 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
           body: JSON.stringify(buildRequest(candidate)),
         },
       );
-      if (!response.ok) throw new Error(await classifyResponse(response));
+      if (!response.ok) await this.rejectResponse(response);
       const body = await response.json() as GeminiResponse;
       if (body.usageMetadata) this.onUsage?.({
         inputTokens: body.usageMetadata.promptTokenCount ?? 0,
-        outputTokens: body.usageMetadata.candidatesTokenCount ?? 0,
+        outputTokens: Math.max(body.usageMetadata.candidatesTokenCount ?? 0, (body.usageMetadata.totalTokenCount ?? 0) - (body.usageMetadata.promptTokenCount ?? 0)),
         totalTokens: body.usageMetadata.totalTokenCount ?? 0,
       });
       const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
@@ -98,6 +102,12 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
       clearTimeout(timeout);
     }
   }
+
+  private async rejectResponse(response: Response): Promise<never> {
+    const code = await classifyResponse(response);
+    this.onFailure?.({ code, httpStatus: response.status });
+    throw new Error(code);
+  }
 }
 
 function normalizeClientError(error: unknown): Error {
@@ -107,6 +117,8 @@ function normalizeClientError(error: unknown): Error {
 }
 
 async function classifyResponse(response: Response): Promise<string> {
+  // Payment failures must not be mistaken for retryable RESOURCE_EXHAUSTED responses.
+  if (response.status === 402) return "AI_BILLING_REQUIRED";
   const body = await response.clone().json().catch(() => null) as GeminiErrorResponse | null;
   const upstreamStatus = body?.error?.status;
   const upstreamMessage = body?.error?.message ?? "";
@@ -135,7 +147,7 @@ function buildRequest(candidate: AiAnalysisCandidate) {
     systemInstruction: {
       parts: [{ text: DISCLOSURE_SUMMARY_SYSTEM_INSTRUCTION }],
     },
-    contents: [{ role: "user", parts: [{ text: buildDisclosureSummaryPrompt(candidate) }] }],
+    contents: [{ role: "user", parts: [{ text: buildCorporateAiPrompt(candidate) }] }],
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: DISCLOSURE_SUMMARY_MAX_OUTPUT_TOKENS,

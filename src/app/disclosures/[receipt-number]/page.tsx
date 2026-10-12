@@ -6,6 +6,8 @@ import { DisclosureDocumentList } from "@/components/DisclosureDocumentList";
 import { ReturnToListButton } from "@/components/ReturnToListButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { GuestAiSummaryGate } from "@/components/GuestAiSummaryGate";
+import { readGuestAiAccess } from "@/server/guest-ai-access";
 import { findAiDisclosureSummaryState } from "@/data/server-ai-analysis-repository";
 import { createDisclosureDocumentRepository } from "@/data/supabase-disclosure-document-repository";
 import { createDisclosureRepository } from "@/data/supabase-disclosure-repository";
@@ -51,11 +53,12 @@ export default async function DisclosureDetailPage({ params }: Props) {
   }
 
   const documentRepository = createDisclosureDocumentRepository();
-  const [companyDisclosures, documents, documentStatus, aiSummaryState] = await Promise.all([
+  const [companyDisclosures, documents, documentStatus, aiSummaryState, aiAccess] = await Promise.all([
     listCompanyDisclosures(repository, disclosure.company.stockCode, 30),
     listDisclosureDocuments(documentRepository, disclosure.receiptNumber),
     getDisclosureDocumentCollectionStatus(documentRepository, disclosure.receiptNumber),
     findAiDisclosureSummaryState(disclosure.receiptNumber).catch(() => ({ status: "UNAVAILABLE", summary: null, updatedAt: null } as const)),
+    readGuestAiAccess(disclosure.receiptNumber),
   ]);
   const correctionTimeline = findCorrectionTimeline(disclosure, companyDisclosures);
 
@@ -79,7 +82,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             <div><dt>접수번호</dt><dd>{disclosure.receiptNumber}</dd></div>
             <div><dt>상태</dt><dd>{getStatusLabel(disclosure.status)}</dd></div>
           </dl>
-          <AiDisclosureSummaryPreview
+          {aiSummaryState.status === "READY" && aiAccess !== "MEMBER" && aiAccess !== "GUEST_ALLOWED" ? <GuestAiSummaryGate receiptNumber={disclosure.receiptNumber} alreadyUsed={aiAccess === "SIGN_IN"} ageRequired={aiAccess === "MEMBER_AGE_REQUIRED" || aiAccess === "GUEST_AGE_REQUIRED"} member={aiAccess === "MEMBER_AGE_REQUIRED"} /> : <AiDisclosureSummaryPreview
             companyName={disclosure.company.name}
             reportName={disclosure.reportName}
             disclosedOn={disclosure.disclosedOn}
@@ -88,7 +91,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             receiptNumber={disclosure.receiptNumber}
             state={aiSummaryState}
             documentStatus={documentStatus}
-          />
+          />}
           <DisclosureDocumentList receiptNumber={disclosure.receiptNumber} documents={documents} status={documentStatus} />
           {correctionTimeline.length > 1 && (
             <section className="correction-timeline" aria-labelledby="correction-heading">
