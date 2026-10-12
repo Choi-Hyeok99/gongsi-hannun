@@ -18,7 +18,7 @@ on:
         options: [collect, probe, ai_only]
         default: collect
       analysis_limit:
-        description: "AI recovery batch size (1-200); schedules retain the existing 200-record backfill setting"
+        description: "AI recovery batch size (1-200); schedules default to 10 for free-tier operation"
         type: number
         default: 3
 
@@ -134,8 +134,8 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: gemini-3.5-flash-lite
-      AI_ANALYSIS_LIMIT: ${{ inputs.mode != 'collect' && inputs.analysis_limit || '200' }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+      AI_ANALYSIS_LIMIT: ${{ inputs.mode != 'collect' && inputs.analysis_limit || vars.AI_ANALYSIS_LIMIT || '10' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

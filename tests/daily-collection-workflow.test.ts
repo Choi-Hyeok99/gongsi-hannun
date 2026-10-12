@@ -10,6 +10,7 @@ describe("daily market data workflow", () => {
     expect(summaryJob).toContain("if: always() && !cancelled()");
     expect(summaryJob).toContain("run-ai-disclosure-summary.ts --probe");
     expect(summaryJob).toContain("inputs.mode != 'collect' && inputs.analysis_limit");
+    expect(summaryJob).toContain("vars.AI_ANALYSIS_LIMIT || '10'");
     expect(summaryJob).not.toContain("continue-on-error: true");
     expect(workflow).toMatch(/name: Collect OpenDART filing documents\r?\n\s+continue-on-error: true/);
   });

@@ -69,6 +69,7 @@ function classifyAnalysisError(error: unknown): string {
 
 const SAFE_ANALYSIS_ERROR_CODES = new Set([
   "AI_INVALID_RESPONSE",
+  "AI_NO_SAFE_INPUT",
   "AI_INVALID_REQUEST",
   "AI_AUTH_ERROR",
   "AI_BILLING_REQUIRED",
