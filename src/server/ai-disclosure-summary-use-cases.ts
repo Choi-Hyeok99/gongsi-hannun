@@ -63,7 +63,7 @@ export async function analyzePendingDisclosures(
   return { readCount: candidates.length, succeededCount, skippedCount, failedCount, ...(deferredCount ? {deferredCount} : {}) };
 }
 
-function classifyAnalysisError(error: unknown): string {
+export function classifyAnalysisError(error: unknown): string {
   if (error instanceof Error && error.name === "AbortError") return "AI_TIMEOUT";
   if (error instanceof Error && SAFE_ANALYSIS_ERROR_CODES.has(error.message)) return error.message;
   return "AI_UPSTREAM_ERROR";

@@ -1,9 +1,9 @@
 import { createSupabaseAiAnalysisRepository } from "@/data/supabase-ai-analysis-repository";
 import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-cases";
 import { readAiAnalysisEnvironment } from "@/server/ai-env";
+import { AI_ANALYSIS_VERSION } from "@/domain/ai-analysis-version";
 import { GeminiDisclosureSummaryClient } from "./gemini-summary-client";
 
-const ANALYSIS_VERSION = "disclosure-summary-v4-all-types-safe-facts";
 const GEMINI_INPUT_USD_PER_MILLION_TOKENS = 0.3;
 const GEMINI_OUTPUT_USD_PER_MILLION_TOKENS = 2.5;
 
@@ -34,7 +34,7 @@ async function main() {
     client,
     {
       limit: environment.AI_ANALYSIS_LIMIT,
-      analysisVersion: ANALYSIS_VERSION,
+      analysisVersion: AI_ANALYSIS_VERSION,
       concurrency: 1,
       batchDelayMs: 10_000,
     },

@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AI_AGE_COOKIE_NAME, createAiAgeClaim, createGuestAiClaim, GUEST_AI_COOKIE_NAME } from "@/domain/guest-ai-access";
+import { AI_AGE_COOKIE_NAME, createAiAgeClaim, createGuestAiClaim, createGuestAiPendingClaim, GUEST_AI_COOKIE_NAME, GUEST_AI_PENDING_COOKIE_NAME } from "@/domain/guest-ai-access";
 
 const mocks = vi.hoisted(() => ({getUser: vi.fn(), get: vi.fn(), set: vi.fn(), summary: vi.fn()}));
 vi.mock("server-only", () => ({}));
@@ -31,6 +31,12 @@ describe("guest AI action", () => {
     mocks.summary.mockResolvedValue({status});
     await expect(openGuestAiSummary(form(first))).rejects.toThrow(`REDIRECT:/disclosures/${first}`);
     expect(mocks.set.mock.calls.some(call=>call[0]===GUEST_AI_COOKIE_NAME)).toBe(false);
+    expect(mocks.set).toHaveBeenCalledWith(GUEST_AI_PENDING_COOKIE_NAME,expect.any(String),expect.objectContaining({maxAge:300,httpOnly:true}));
+  });
+  it("returns to the already pending guest filing instead of reserving another",async()=>{
+    mocks.get.mockImplementation((name:string)=> name===AI_AGE_COOKIE_NAME ? {value:createAiAgeClaim("guest-test-secret")} : name===GUEST_AI_PENDING_COOKIE_NAME ? {value:createGuestAiPendingClaim(first,"guest-test-secret")} : undefined);
+    await expect(openGuestAiSummary(form(second))).rejects.toThrow(`REDIRECT:/disclosures/${first}#ai-summary-heading`);
+    expect(mocks.summary).not.toHaveBeenCalled();expect(mocks.set).not.toHaveBeenCalled();
   });
   it("allows revisits but blocks a second receipt without fetching its summary", async () => {
     mocks.get.mockImplementation((name:string) => ({value:name===AI_AGE_COOKIE_NAME ? createAiAgeClaim("guest-test-secret") : createGuestAiClaim(first,"guest-test-secret")}));

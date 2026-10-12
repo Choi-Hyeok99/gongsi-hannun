@@ -1,6 +1,11 @@
-export type AiAnalysisRetryState = Readonly<{status:string;attemptCount:number;errorCode:string;updatedAt?:string}>;
+export type AiAnalysisRetryState = Readonly<{status:string;attemptCount:number;errorCode:string;updatedAt?:string;leaseExpiresAt?:string}>;
 
 export function isRetryableAiAnalysis(state: AiAnalysisRetryState, now = Date.now()): boolean {
+  if (state.status === "PENDING") return true;
+  if (state.status === "PROCESSING") {
+    const expiry = Date.parse(state.leaseExpiresAt ?? "");
+    return Number.isFinite(expiry) && expiry <= now && state.attemptCount < 20;
+  }
   if (state.status !== "FAILED") return false;
   if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_BILLING_REQUIRED"].includes(state.errorCode)) return false;
   if (state.errorCode === "AI_RATE_LIMITED") {

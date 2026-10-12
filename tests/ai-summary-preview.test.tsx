@@ -14,7 +14,7 @@ describe("AiDisclosureSummaryPreview", () => {
   };
 
   it.each([
-    [{ status: "NOT_GENERATED", summary: null } as const, "요약 대기", "AI 요약을 순차적으로 준비합니다."],
+    [{ status: "NOT_GENERATED", summary: null } as const, "요약 대기", "이 공시의 AI 요약을 준비합니다."],
     [{ status: "PENDING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 예정", "AI 해설을 준비하고 있습니다."],
     [{ status: "PROCESSING", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "해설 작성 중", "공시 내용을 확인하고 있습니다."],
     [{ status: "FAILED", summary: null, updatedAt: "2026-09-14T03:20:00Z" } as const, "준비 지연", "AI 해설 준비가 지연되고 있습니다."],
