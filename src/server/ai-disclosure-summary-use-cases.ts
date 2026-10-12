@@ -19,6 +19,7 @@ export async function analyzePendingDisclosures(
   let succeededCount = 0;
   let skippedCount = 0;
   let failedCount = 0;
+  let deferredCount = 0;
   const concurrency = Math.max(1, Math.min(5, Math.trunc(options.concurrency ?? 3)));
   const batchDelayMs = Math.max(0, Math.min(10_000, Math.trunc(options.batchDelayMs ?? 0)));
   let providerBlocked = false;
@@ -46,7 +47,8 @@ export async function analyzePendingDisclosures(
         const code = classifyAnalysisError(error);
         await repository.fail(candidate.eventId, options.analysisVersion, code);
         if (["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_BILLING_REQUIRED", "AI_RATE_LIMITED", "AI_PROVIDER_UNAVAILABLE"].includes(code)) providerBlocked = true;
-        failedCount += 1;
+        if (code === "AI_RATE_LIMITED") deferredCount += 1;
+        else failedCount += 1;
       }
     }));
     if (providerBlocked) {
@@ -58,7 +60,7 @@ export async function analyzePendingDisclosures(
     }
   }
 
-  return { readCount: candidates.length, succeededCount, skippedCount, failedCount };
+  return { readCount: candidates.length, succeededCount, skippedCount, failedCount, ...(deferredCount ? {deferredCount} : {}) };
 }
 
 function classifyAnalysisError(error: unknown): string {
