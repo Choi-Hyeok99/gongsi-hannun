@@ -4,6 +4,15 @@ import { describe, expect, it } from "vitest";
 const workflow = readFileSync(".github/workflows/daily-collection.yml", "utf8");
 
 describe("daily market data workflow", () => {
+  it("runs analysis independently after failed or skipped source collection", () => {
+    const summaryJob = workflow.slice(workflow.indexOf("  summarize:"));
+    expect(summaryJob).toContain("needs: collect");
+    expect(summaryJob).toContain("if: always() && !cancelled()");
+    expect(summaryJob).toContain("run-ai-disclosure-summary.ts --probe");
+    expect(summaryJob).toContain("inputs.mode == 'ai_only' && inputs.analysis_limit");
+    expect(summaryJob).not.toContain("continue-on-error: true");
+    expect(workflow).toMatch(/name: Collect OpenDART filing documents\r?\n\s+continue-on-error: true/);
+  });
   it("runs after the preliminary and final Korean market close transmissions", () => {
     expect(workflow).toContain('cron: "10 7 * * 1-5"');
     expect(workflow).toContain('cron: "20 9 * * 1-5"');

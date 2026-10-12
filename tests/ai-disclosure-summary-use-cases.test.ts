@@ -17,6 +17,14 @@ function repository(overrides: Partial<AiAnalysisRepository> = {}): AiAnalysisRe
 }
 
 describe("analyzePendingDisclosures", () => {
+  it.each(["AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_INVALID_REQUEST", "AI_RATE_LIMITED"])("stops a sequential batch after systemic failure %s", async (code) => {
+    const repo = repository({findCandidates:vi.fn(async()=>Array.from({length:3},(_,index)=>({...candidate,eventId:`event-${index}`})))});
+    const provider: AiDisclosureSummaryProvider = {providerName:"google",modelName:"gemini",summarize:vi.fn(async()=>{throw new Error(code);})};
+    const result = await analyzePendingDisclosures(repo,provider,{limit:3,analysisVersion:"v1",concurrency:1});
+    expect(result).toEqual({readCount:3,succeededCount:0,skippedCount:2,failedCount:1});
+    expect(provider.summarize).toHaveBeenCalledTimes(1);
+    expect(repo.begin).toHaveBeenCalledTimes(1);
+  });
   it("stores a successful structured summary", async () => {
     const repo = repository();
     const provider: AiDisclosureSummaryProvider = { providerName: "google", modelName: "gemini-2.5-flash-lite", summarize: vi.fn(async () => summary) };
@@ -36,5 +44,41 @@ describe("analyzePendingDisclosures", () => {
     const provider: AiDisclosureSummaryProvider = { providerName: "google", modelName: "gemini-2.5-flash-lite", summarize: vi.fn(async () => { throw new Error("credential=do-not-store"); }) };
     await expect(analyzePendingDisclosures(repo, provider, { limit: 1, analysisVersion: "v1" })).resolves.toMatchObject({ failedCount: 1 });
     expect(repo.fail).toHaveBeenCalledWith("event-1", "v1", "AI_UPSTREAM_ERROR");
+  });
+
+  it("preserves a safe provider diagnostic code", async () => {
+    const repo = repository();
+    const provider: AiDisclosureSummaryProvider = { providerName: "google", modelName: "gemini", summarize: vi.fn(async () => { throw new Error("AI_RATE_LIMITED"); }) };
+    await analyzePendingDisclosures(repo, provider, { limit: 1, analysisVersion: "v1" });
+    expect(repo.fail).toHaveBeenCalledWith("event-1", "v1", "AI_RATE_LIMITED");
+  });
+
+  it("processes a large batch concurrently without exceeding the safety cap", async () => {
+    const candidates = Array.from({ length: 8 }, (_, index) => ({
+      ...candidate,
+      eventId: `event-${index + 1}`,
+      receiptNumber: String(index + 1),
+    }));
+    const repo = repository({ findCandidates: vi.fn(async () => candidates) });
+    let active = 0;
+    let maximumActive = 0;
+    const provider: AiDisclosureSummaryProvider = {
+      providerName: "google",
+      modelName: "gemini",
+      summarize: vi.fn(async () => {
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        active -= 1;
+        return summary;
+      }),
+    };
+
+    await expect(analyzePendingDisclosures(repo, provider, {
+      limit: 8,
+      analysisVersion: "v1",
+      concurrency: 20,
+    })).resolves.toEqual({ readCount: 8, succeededCount: 8, skippedCount: 0, failedCount: 0 });
+    expect(maximumActive).toBe(5);
   });
 });
