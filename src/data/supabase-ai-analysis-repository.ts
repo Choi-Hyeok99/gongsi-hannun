@@ -22,56 +22,28 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   constructor(private readonly client: SupabaseClient) {}
 
   async findCandidates(limit: number, analysisVersion: string): Promise<readonly AiAnalysisCandidate[]> {
-    const { data, error } = await this.client
-      .from("events")
-      .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,title,document_kind,sequence_no,content_text,content_hash))")
-      .eq("visibility", "PUBLIC")
-      .order("occurred_on", { ascending: false })
-      .limit(Math.max(limit * 4, limit));
-    if (error) throw new DataAccessError("AI 분석 대상 공시를 조회하지 못했습니다.");
-
-    const rows = (data ?? []) as unknown as JsonObject[];
-    const eventIds = rows.map((row) => String(row.id));
-    const existing = await this.findExistingStates(eventIds, analysisVersion);
     const candidates: AiAnalysisCandidate[] = [];
+    const pageSize = Math.max(100, Math.min(limit * 4, 200));
 
-    for (const row of rows) {
-      const eventId = String(row.id);
-      const state = existing.get(eventId);
-      if (state && state.status !== "FAILED") continue;
-      if (state && state.attemptCount >= 3) continue;
-      const eventType = String(row.event_type);
-      if (!isDisclosureEventType(eventType)) continue;
-      const disclosure = firstObject(row.source_disclosures);
-      const company = disclosure ? firstObject(disclosure.companies) : null;
-      const documents = disclosure ? objectArray(disclosure.disclosure_documents) : [];
-      const mainDocument = documents
-        .slice()
-        .sort((left, right) => Number(left.sequence_no) - Number(right.sequence_no))
-        .find((document) => document.document_kind === "MAIN") ?? documents[0];
-      const contentText = typeof mainDocument?.content_text === "string" ? mainDocument.content_text.trim() : "";
-      if (!disclosure || !company || !mainDocument || !contentText) continue;
-      const receiptNumber = String(disclosure.receipt_no);
-      const reportName = String(disclosure.report_name);
-      const contentHash = String(mainDocument.content_hash ?? "");
-      candidates.push({
-        eventId,
-        receiptNumber,
-        companyName: String(company.name_ko),
-        reportName,
-        disclosedOn: String(disclosure.disclosed_on),
-        eventType,
-        ruleImportanceScore: Number(row.rule_importance_score),
-        contentText,
-        inputHash: createHash("sha256").update(`${analysisVersion}:${receiptNumber}:${reportName}:${contentHash}:${contentText.length}`).digest("hex"),
-        sourceDocument: {
-          id: String(mainDocument.id),
-          title: String(mainDocument.title),
-          kind: mainDocument.document_kind === "ATTACHMENT" ? "ATTACHMENT" : "MAIN",
-          contentHash,
-        },
-      });
-      if (candidates.length >= limit) break;
+    for (let offset = 0; candidates.length < limit; offset += pageSize) {
+      const { data, error } = await this.client
+        .from("events")
+        .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,title,document_kind,sequence_no,content_text,content_hash))")
+        .eq("visibility", "PUBLIC")
+        .order("occurred_on", { ascending: false })
+        .order("rule_importance_score", { ascending: false })
+        .range(offset, offset + pageSize - 1);
+      if (error) throw new DataAccessError("AI 분석 대상 공시를 조회하지 못했습니다.");
+
+      const rows = (data ?? []) as unknown as JsonObject[];
+      if (rows.length === 0) break;
+      const existing = await this.findExistingStates(rows.map((row) => String(row.id)), analysisVersion);
+      for (const row of rows) {
+        const candidate = toCandidate(row, analysisVersion, existing);
+        if (candidate) candidates.push(candidate);
+        if (candidates.length >= limit) break;
+      }
+      if (rows.length < pageSize) break;
     }
     return candidates;
   }
@@ -95,11 +67,15 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
 
     const { data: existing, error: readError } = await this.client
       .from("ai_analyses")
-      .select("id,status,attempt_count")
+      .select("id,status,attempt_count,error_code")
       .eq("event_id", candidate.eventId)
       .eq("analysis_version", analysisVersion)
       .maybeSingle();
-    if (readError || !existing || existing.status !== "FAILED" || Number(existing.attempt_count) >= 3) return false;
+    if (readError || !existing || !isRetryableAnalysisState({
+      status: String(existing.status),
+      attemptCount: Number(existing.attempt_count),
+      errorCode: String(existing.error_code ?? ""),
+    })) return false;
     const { data: updated, error: updateError } = await this.client
       .from("ai_analyses")
       .update({ ...row, attempt_count: Number(existing.attempt_count) + 1 })
@@ -163,13 +139,67 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   }
 
   private async findExistingStates(eventIds: readonly string[], analysisVersion: string) {
-    const states = new Map<string, Readonly<{ status: string; attemptCount: number }>>();
+    const states = new Map<string, Readonly<{ status: string; attemptCount: number; errorCode: string }>>();
     if (eventIds.length === 0) return states;
-    const { data, error } = await this.client.from("ai_analyses").select("event_id,status,attempt_count").eq("analysis_version", analysisVersion).in("event_id", eventIds);
+    const { data, error } = await this.client.from("ai_analyses").select("event_id,status,attempt_count,error_code").eq("analysis_version", analysisVersion).in("event_id", eventIds);
     if (error) throw new DataAccessError("기존 AI 분석 상태를 조회하지 못했습니다.");
-    for (const row of data ?? []) states.set(String(row.event_id), { status: String(row.status), attemptCount: Number(row.attempt_count) });
+    for (const row of data ?? []) states.set(String(row.event_id), {
+      status: String(row.status),
+      attemptCount: Number(row.attempt_count),
+      errorCode: String(row.error_code ?? ""),
+    });
     return states;
   }
+}
+
+function toCandidate(
+  row: JsonObject,
+  analysisVersion: string,
+  existing: ReadonlyMap<string, Readonly<{ status: string; attemptCount: number; errorCode: string }>>,
+): AiAnalysisCandidate | null {
+  const eventId = String(row.id);
+  const state = existing.get(eventId);
+  if (state && !isRetryableAnalysisState(state)) return null;
+  const eventType = String(row.event_type);
+  if (!isDisclosureEventType(eventType)) return null;
+  const disclosure = firstObject(row.source_disclosures);
+  const company = disclosure ? firstObject(disclosure.companies) : null;
+  const documents = disclosure ? objectArray(disclosure.disclosure_documents) : [];
+  const mainDocument = documents
+    .slice()
+    .sort((left, right) => Number(left.sequence_no) - Number(right.sequence_no))
+    .find((document) => document.document_kind === "MAIN") ?? documents[0];
+  const contentText = typeof mainDocument?.content_text === "string" ? mainDocument.content_text.trim() : "";
+  if (!disclosure || !company || !mainDocument || !contentText) return null;
+  const receiptNumber = String(disclosure.receipt_no);
+  const reportName = String(disclosure.report_name);
+  const contentHash = String(mainDocument.content_hash ?? "");
+  return {
+    eventId,
+    receiptNumber,
+    companyName: String(company.name_ko),
+    reportName,
+    disclosedOn: String(disclosure.disclosed_on),
+    eventType,
+    ruleImportanceScore: Number(row.rule_importance_score),
+    contentText,
+    inputHash: createHash("sha256").update(`${analysisVersion}:${receiptNumber}:${reportName}:${contentHash}:${contentText.length}`).digest("hex"),
+    sourceDocument: {
+      id: String(mainDocument.id),
+      title: String(mainDocument.title),
+      kind: mainDocument.document_kind === "ATTACHMENT" ? "ATTACHMENT" : "MAIN",
+      contentHash,
+    },
+  };
+}
+
+function isRetryableAnalysisState(state: Readonly<{ status: string; attemptCount: number; errorCode: string }>): boolean {
+  if (state.status !== "FAILED") return false;
+  if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_BILLING_REQUIRED"].includes(state.errorCode)) return false;
+  if (state.errorCode === "AI_RATE_LIMITED") return state.attemptCount < 4;
+  // Legacy clients collapsed provider failures into this code. Permit one classified recovery attempt.
+  if (state.errorCode === "AI_UPSTREAM_ERROR") return state.attemptCount < 4;
+  return state.attemptCount < 2;
 }
 
 export function createSupabaseAiAnalysisRepository(options: RepositoryOptions): AiAnalysisRepository {

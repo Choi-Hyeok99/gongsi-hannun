@@ -12,6 +12,15 @@ on:
         description: "KST collection date (YYYY-MM-DD); defaults to today in Korea"
         required: false
         type: string
+      mode:
+        description: "collect: full pipeline; probe: model access only; ai_only: bounded summary recovery"
+        type: choice
+        options: [collect, probe, ai_only]
+        default: collect
+      analysis_limit:
+        description: "AI recovery batch size (1-200); schedules retain the existing 200-record backfill setting"
+        type: number
+        default: 3
 
 permissions:
   contents: read
@@ -22,8 +31,9 @@ concurrency:
 
 jobs:
   collect:
+    if: github.event_name != 'workflow_dispatch' || inputs.mode == 'collect'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
@@ -79,6 +89,8 @@ jobs:
           NODE
 
       - name: Collect OpenDART disclosures
+        id: disclosures
+        continue-on-error: true
         run: >-
           npx tsx src/jobs/collector/run-disclosure-sync.ts
           "${{ steps.dates.outputs.dart_from }}"
@@ -88,6 +100,7 @@ jobs:
         run: npx tsx src/jobs/collector/run-event-materialization.ts
 
       - name: Collect OpenDART filing documents
+        continue-on-error: true
         run: npx tsx src/jobs/collector/run-disclosure-document-sync.ts
 
       - name: Generate prior-day watchlist alerts
@@ -101,15 +114,39 @@ jobs:
           "${{ steps.dates.outputs.collection_date }}"
 
       - name: Collect KRX daily prices
+        id: prices
+        continue-on-error: true
         run: >-
           npx tsx src/jobs/collector/run-daily-price-sync.ts
           --from "${{ steps.dates.outputs.price_from }}"
           --to "${{ steps.dates.outputs.collection_date }}"
 
+      - name: Report source collection failures
+        if: always() && (steps.prices.outcome == 'failure' || steps.disclosures.outcome == 'failure')
+        run: exit 1
+
+  summarize:
+    needs: collect
+    if: always() && !cancelled() && (github.event_name == 'workflow_dispatch' || vars.AI_SUMMARIES_ENABLED != 'false')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: gemini-3.5-flash-lite
+      AI_ANALYSIS_LIMIT: ${{ inputs.mode != 'collect' && inputs.analysis_limit || '200' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check AI model access without generating content
+        run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts --probe
       - name: Generate AI disclosure summaries
-        continue-on-error: true
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-3.5-flash-lite
-          AI_ANALYSIS_LIMIT: "10"
+        if: inputs.mode != 'probe'
         run: npx tsx src/jobs/analyzer/run-ai-disclosure-summary.ts
