@@ -26,11 +26,11 @@ type Json = Record<string, unknown>;
 function obj(value: unknown): Json { return value && typeof value === "object" && !Array.isArray(value) ? value as Json : {}; }
 function rows(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
 class AnalyticsFailure extends Error {
-  constructor(readonly reason:AnalyticsFailureReason,readonly httpStatus=0) {super("ANALYTICS_UNAVAILABLE");}
+  constructor(readonly reason:AnalyticsFailureReason,readonly httpStatus=0,readonly field?:string,readonly providerCode?:number) {super("ANALYTICS_UNAVAILABLE");}
 }
 function classifyFailureMessages(messages:readonly unknown[]):AnalyticsFailureReason {
   const text=messages.map(value=>String(obj(value).message ?? "")).join(" ");
-  if (/authenticat|invalid.*token|invalid.*credential|invalid.*api.key/i.test(text)) return "AUTH";
+  if (/authenticat|invalid.*token|invalid.*credential|invalid.*api.key|token.*(?:expired|inactive|not active|not yet)/i.test(text)) return "AUTH";
   if (/permission|not authorized|forbidden|access denied|not entitled|not allowed to access/i.test(text)) return "PERMISSION";
   if (/time range|time window|date range|duration|older than|range.*exceed|period.*exceed/i.test(text)) return "TIME_WINDOW";
   if (/unknown (?:type|field|argument)|cannot query|parsing|parse error|variable|undefined|invalid.*query/i.test(text)) return "SCHEMA";
@@ -39,7 +39,9 @@ function classifyFailureMessages(messages:readonly unknown[]):AnalyticsFailureRe
 }
 function reportFailure(dataset:"WORKER"|"TRAFFIC",error:unknown):AnalyticsFailureReason {
   const reason=error instanceof AnalyticsFailure ? error.reason : error instanceof Error && error.name === "TimeoutError" ? "TIMEOUT" : "NETWORK";
-  console.warn("ADMIN_ANALYTICS_FAILURE",JSON.stringify({dataset,reason,httpStatus:error instanceof AnalyticsFailure ? error.httpStatus : 0}));
+  console.warn("ADMIN_ANALYTICS_FAILURE",JSON.stringify({dataset,reason,httpStatus:error instanceof AnalyticsFailure ? error.httpStatus : 0,
+    ...(error instanceof AnalyticsFailure && error.field ? {field:error.field} : {}),
+    ...(error instanceof AnalyticsFailure && error.providerCode !== undefined ? {providerCode:error.providerCode} : {})}));
   return reason;
 }
 async function query(fetchImpl: typeof fetch, token: string, query: string, variables: Json): Promise<Json> {
@@ -47,9 +49,15 @@ async function query(fetchImpl: typeof fetch, token: string, query: string, vari
     method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},
     body:JSON.stringify({query,variables}),cache:"no-store",signal:AbortSignal.timeout(5000),
   });
+  const body = obj(await response.json().catch(()=>null));
+  if (rows(body.errors).length) {
+    const errors=rows(body.errors);
+    const message=errors.map(error=>String(obj(error).message ?? "")).join(" ");
+    const field=["string","String","Date","Time","date_ASC","workersInvocationsAdaptive","httpRequests1dGroups","requests","errors","pageViews","uniques"].find(value=>message.includes(`"${value}"`)||message.includes(`'${value}'`));
+    const providerCode=nonNegativeCount(obj(errors[0]).code);
+    throw new AnalyticsFailure(classifyFailureMessages(errors),response.status,field,providerCode ?? undefined);
+  }
   if (!response.ok) throw new AnalyticsFailure(response.status===401 ? "AUTH" : response.status===403 ? "PERMISSION" : response.status===429 ? "RATE_LIMIT" : "UPSTREAM",response.status);
-  const body = obj(await response.json());
-  if (rows(body.errors).length) throw new AnalyticsFailure(classifyFailureMessages(rows(body.errors)),response.status);
   if (!body.data) throw new AnalyticsFailure("UPSTREAM",response.status);
   return obj(obj(body.data).viewer);
 }

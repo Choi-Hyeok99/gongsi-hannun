@@ -40,4 +40,9 @@ describe("Cloudflare read-only aggregate metrics",()=>{
     const data=await readCloudflareAdminMetrics(env,async()=>new Response(JSON.stringify({errors:[{message:"Authentication error with private-token"}]})));
     expect(data.worker.reason).toBe("AUTH");expect(JSON.stringify(data)).not.toContain("private-token");expect(JSON.stringify(warn.mock.calls)).not.toContain("private-token");warn.mockRestore();
   });
+  it("classifies JSON errors even when GraphQL returns HTTP 400",async()=>{
+    const warn=vi.spyOn(console,"warn").mockImplementation(()=>{});
+    const data=await readCloudflareAdminMetrics(env,async()=>new Response(JSON.stringify({errors:[{message:'unknown type "String" private-sensitive-body',code:1234}]}),{status:400}));
+    expect(data.worker.reason).toBe("SCHEMA");expect(JSON.stringify(warn.mock.calls)).toContain('"field":"String"');expect(JSON.stringify(warn.mock.calls)).not.toContain("private-sensitive");warn.mockRestore();
+  });
 });
