@@ -220,8 +220,8 @@ function AiSummaryStatus(props: Props) {
 const STATUS_CONTENT = {
   NOT_GENERATED: {
     badge: "요약 대기",
-    title: "AI 요약을 순차적으로 준비합니다.",
-    description: "모든 공개 공시 유형을 대상으로, 개인정보 없이 확인할 수 있는 기업 사실을 무료 한도 내에서 순차 분석합니다. 근거가 부족하면 요약을 만들지 않으며, 아래 제출 문서와 OpenDART 원문은 바로 확인할 수 있습니다.",
+    title: "이 공시의 AI 요약을 준비합니다.",
+    description: "모든 공개 공시 유형을 대상으로, 방문한 공시의 기업 사실을 무료 한도 내에서 분석합니다. 개인정보 없이 확인할 근거가 부족하면 요약을 만들지 않으며, 아래 제출 문서와 OpenDART 원문은 바로 확인할 수 있습니다.",
   },
   PENDING: {
     badge: "준비 예정",

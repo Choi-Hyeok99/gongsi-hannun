@@ -26,7 +26,7 @@ type GeminiErrorResponse = Readonly<{
 }>;
 
 export type AiProviderUsage = Readonly<{ inputTokens: number; outputTokens: number; totalTokens: number }>;
-export type AiProviderFailure = Readonly<{ code: string; httpStatus: number }>;
+export type AiProviderFailure = Readonly<{ code: string; httpStatus: number; reason?: "MODEL_OVERLOADED" | "NETWORK" | "INVALID_HEADER" | "TIMEOUT"; responseType?: "JSON" | "HTML" | "OTHER" }>;
 
 type Options = Readonly<{
   apiKey: string;
@@ -47,7 +47,7 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
   private readonly onFailure?: (failure: AiProviderFailure) => void;
 
   constructor(options: Options) {
-    this.apiKey = options.apiKey;
+    this.apiKey = options.apiKey.trim();
     this.modelName = options.model ?? DEFAULT_MODEL;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
@@ -97,7 +97,11 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
       return parseDisclosureSummary(parsedJson);
     } catch (error) {
       if (error instanceof SyntaxError) throw new Error("AI_INVALID_RESPONSE");
-      throw normalizeClientError(error);
+      const normalized = normalizeClientError(error);
+      if (error instanceof TypeError || error instanceof Error && error.name === "AbortError") {
+        this.onFailure?.({code:normalized.message,httpStatus:0,reason:error.name === "AbortError" ? "TIMEOUT" : /header|ByteString|ISO-8859-1/i.test(error.message) ? "INVALID_HEADER" : "NETWORK"});
+      }
+      throw normalized;
     } finally {
       clearTimeout(timeout);
     }
@@ -105,7 +109,10 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
 
   private async rejectResponse(response: Response): Promise<never> {
     const code = await classifyResponse(response);
-    this.onFailure?.({ code, httpStatus: response.status });
+    const body = await response.clone().json().catch(()=>null) as GeminiErrorResponse|null;
+    const overloaded = /overloaded|high demand|capacity/i.test(body?.error?.message??"");
+    const type = response.headers.get("content-type")??"";
+    this.onFailure?.({ code, httpStatus: response.status, ...(overloaded ? {reason:"MODEL_OVERLOADED" as const} : {}), responseType:type.includes("application/json") ? "JSON" : type.includes("text/html") ? "HTML" : "OTHER" });
     throw new Error(code);
   }
 }
@@ -122,6 +129,10 @@ async function classifyResponse(response: Response): Promise<string> {
   const body = await response.clone().json().catch(() => null) as GeminiErrorResponse | null;
   const upstreamStatus = body?.error?.status;
   const upstreamMessage = body?.error?.message ?? "";
+  // Persist only allowlisted categories, never provider messages or credentials.
+  if (/user location is not supported|not available in your country|unsupported region/i.test(upstreamMessage)) return "AI_REGION_UNAVAILABLE";
+  if (/response[_ ]?schema|generationConfig|unknown name|invalid JSON payload|unsupported.*schema/i.test(upstreamMessage)) return "AI_SCHEMA_ERROR";
+  if (/key.*(?:leaked|blocked|restricted)/i.test(upstreamMessage)) return "AI_AUTH_ERROR";
   if (/api key not valid|api key.*invalid/i.test(upstreamMessage)) return "AI_AUTH_ERROR";
   if (upstreamStatus === "UNAUTHENTICATED" || upstreamStatus === "PERMISSION_DENIED") return "AI_AUTH_ERROR";
   if (upstreamStatus === "RESOURCE_EXHAUSTED") return "AI_RATE_LIMITED";

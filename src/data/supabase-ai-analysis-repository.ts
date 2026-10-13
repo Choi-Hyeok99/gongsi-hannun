@@ -22,7 +22,21 @@ type RepositoryOptions = Readonly<{
 type JsonObject = Record<string, unknown>;
 
 export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
+  private readonly leases = new Map<string, string>();
   constructor(private readonly client: SupabaseClient, private readonly corporateFactsOnly = false) {}
+
+  async findCandidateByReceiptNumber(receiptNumber: string, analysisVersion: string): Promise<AiAnalysisCandidate | null> {
+    const { data, error } = await this.client.from("events")
+      .select("id,event_type,rule_importance_score,source_disclosures!inner(receipt_no,report_name,disclosed_on,companies!inner(name_ko),disclosure_documents(id,title,document_kind,sequence_no,content_text,content_hash))")
+      .eq("visibility", "PUBLIC")
+      .eq("source_disclosures.receipt_no", receiptNumber)
+      .limit(1).maybeSingle();
+    if (error) throw new DataAccessError("AI 분석 대상 공시를 조회하지 못했습니다.");
+    if (!data) return null;
+    const states = await this.findExistingStates([String(data.id)], analysisVersion);
+    const candidate = toCandidate(data as unknown as JsonObject, analysisVersion, states);
+    return candidate && (!this.corporateFactsOnly || corporateAiInput(candidate)) ? candidate : null;
+  }
 
   async findCandidates(limit: number, analysisVersion: string): Promise<readonly AiAnalysisCandidate[]> {
     const backlogCount = limit >= 4 ? Math.floor(limit / 4) : 0;
@@ -75,12 +89,15 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       error_code: null,
     };
     const { error } = await this.client.from("ai_analyses").insert(row);
-    if (!error) return true;
+    if (!error) {
+      this.leases.set(`${candidate.eventId}:${analysisVersion}`, row.locked_at);
+      return true;
+    }
     if (error.code !== "23505") throw new DataAccessError("AI 분석 작업을 시작하지 못했습니다.");
 
     const { data: existing, error: readError } = await this.client
       .from("ai_analyses")
-      .select("id,status,attempt_count,error_code,updated_at")
+      .select("id,status,attempt_count,error_code,updated_at,locked_at,lease_expires_at")
       .eq("event_id", candidate.eventId)
       .eq("analysis_version", analysisVersion)
       .maybeSingle();
@@ -89,20 +106,27 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       attemptCount: Number(existing.attempt_count),
       errorCode: String(existing.error_code ?? ""),
       updatedAt: String(existing.updated_at ?? ""),
+      leaseExpiresAt: String(existing.lease_expires_at ?? ""),
     })) return false;
-    const { data: updated, error: updateError } = await this.client
+    let query = this.client
       .from("ai_analyses")
-      .update({ ...row, attempt_count: Number(existing.attempt_count) + 1 })
+      .update({ ...row, attempt_count: Math.min(20, Number(existing.attempt_count) + 1) })
       .eq("id", existing.id)
-      .eq("status", "FAILED")
+      .eq("status", existing.status)
+      .eq("attempt_count", existing.attempt_count);
+    if (existing.status === "PROCESSING") query = query.eq("locked_at", existing.locked_at).lte("lease_expires_at", now.toISOString());
+    const { data: updated, error: updateError } = await query
       .select("id")
       .maybeSingle();
     if (updateError) throw new DataAccessError("AI 분석 재시도를 시작하지 못했습니다.");
+    if (updated) this.leases.set(`${candidate.eventId}:${analysisVersion}`, row.locked_at);
     return Boolean(updated);
   }
 
   async complete(eventId: string, analysisVersion: string, provider: AiDisclosureSummaryProvider, summary: GeneratedAiDisclosureSummary): Promise<void> {
-    const { error } = await this.client.from("ai_analyses").update({
+    const lease = this.leases.get(`${eventId}:${analysisVersion}`);
+    if (!lease) throw new DataAccessError("AI 분석 작업 잠금이 없습니다.");
+    const { data, error } = await this.client.from("ai_analyses").update({
       status: "SUCCEEDED",
       model_provider: provider.providerName,
       model_name: provider.modelName,
@@ -116,17 +140,19 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       locked_at: null,
       lease_expires_at: null,
       error_code: null,
-    }).eq("event_id", eventId).eq("analysis_version", analysisVersion).eq("status", "PROCESSING");
-    if (error) throw new DataAccessError("AI 분석 결과를 저장하지 못했습니다.");
+    }).eq("event_id", eventId).eq("analysis_version", analysisVersion).eq("status", "PROCESSING").eq("locked_at", lease).select("id").maybeSingle();
+    if (error || !data) throw new DataAccessError("AI 분석 결과를 저장하지 못했습니다.");
   }
 
   async fail(eventId: string, analysisVersion: string, errorCode: string): Promise<void> {
+    const lease = this.leases.get(`${eventId}:${analysisVersion}`);
+    if (!lease) throw new DataAccessError("AI 분석 작업 잠금이 없습니다.");
     const { error } = await this.client.from("ai_analyses").update({
       status: "FAILED",
       error_code: errorCode,
       locked_at: null,
       lease_expires_at: null,
-    }).eq("event_id", eventId).eq("analysis_version", analysisVersion).eq("status", "PROCESSING");
+    }).eq("event_id", eventId).eq("analysis_version", analysisVersion).eq("status", "PROCESSING").eq("locked_at", lease);
     if (error) throw new DataAccessError("AI 분석 실패 상태를 저장하지 못했습니다.");
   }
 
@@ -155,7 +181,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
   private async findExistingStates(eventIds: readonly string[], analysisVersion: string) {
     const states = new Map<string, AiAnalysisRetryState>();
     if (eventIds.length === 0) return states;
-    const { data, error } = await this.client.from("ai_analyses").select("event_id,analysis_version,status,attempt_count,error_code,updated_at").in("event_id", eventIds);
+    const { data, error } = await this.client.from("ai_analyses").select("event_id,analysis_version,status,attempt_count,error_code,updated_at,lease_expires_at").in("event_id", eventIds);
     if (error) throw new DataAccessError("기존 AI 분석 상태를 조회하지 못했습니다.");
     for (const row of data ?? []) {
       if (states.get(String(row.event_id))?.status === "SUCCEEDED") continue;
@@ -165,6 +191,7 @@ export class SupabaseAiAnalysisRepository implements AiAnalysisRepository {
       attemptCount: Number(row.attempt_count),
       errorCode: String(row.error_code ?? ""),
       updatedAt: String(row.updated_at ?? ""),
+      leaseExpiresAt: String(row.lease_expires_at ?? ""),
       });
     }
     return states;

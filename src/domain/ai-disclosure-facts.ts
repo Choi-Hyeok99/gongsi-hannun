@@ -42,6 +42,7 @@ export function verifyDisclosureFactCandidates(
   input: FactVerificationInput,
   candidates: readonly DisclosureFactCandidate[],
 ): readonly VerifiedDisclosureFact[] {
+  if (candidates.length === 0) return [];
   if (!/^[0-9a-f]{64}$/.test(input.sourceDocument.contentHash)) return [];
   const normalizedDocument = normalizeWithOffsets(input.contentText);
   const verified: VerifiedDisclosureFact[] = [];

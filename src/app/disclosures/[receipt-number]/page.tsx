@@ -7,6 +7,7 @@ import { ReturnToListButton } from "@/components/ReturnToListButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { GuestAiSummaryGate } from "@/components/GuestAiSummaryGate";
+import { OnDemandAiSummary } from "@/components/OnDemandAiSummary";
 import { readGuestAiAccess } from "@/server/guest-ai-access";
 import { findAiDisclosureSummaryState } from "@/data/server-ai-analysis-repository";
 import { createDisclosureDocumentRepository } from "@/data/supabase-disclosure-document-repository";
@@ -61,6 +62,8 @@ export default async function DisclosureDetailPage({ params }: Props) {
     readGuestAiAccess(disclosure.receiptNumber),
   ]);
   const correctionTimeline = findCorrectionTimeline(disclosure, companyDisclosures);
+  const canReadSummary = aiAccess === "MEMBER" || aiAccess === "GUEST_ALLOWED";
+  const requestSummary = aiAccess === "GUEST_REQUESTED" || canReadSummary && aiSummaryState.status !== "READY";
 
   return (
     <div className="site-shell">
@@ -82,7 +85,7 @@ export default async function DisclosureDetailPage({ params }: Props) {
             <div><dt>접수번호</dt><dd>{disclosure.receiptNumber}</dd></div>
             <div><dt>상태</dt><dd>{getStatusLabel(disclosure.status)}</dd></div>
           </dl>
-          {aiSummaryState.status === "READY" && aiAccess !== "MEMBER" && aiAccess !== "GUEST_ALLOWED" ? <GuestAiSummaryGate receiptNumber={disclosure.receiptNumber} alreadyUsed={aiAccess === "SIGN_IN"} ageRequired={aiAccess === "MEMBER_AGE_REQUIRED" || aiAccess === "GUEST_AGE_REQUIRED"} member={aiAccess === "MEMBER_AGE_REQUIRED"} /> : <AiDisclosureSummaryPreview
+          {requestSummary ? <OnDemandAiSummary receiptNumber={disclosure.receiptNumber} originalUrl={disclosure.originalUrl} /> : !canReadSummary ? <GuestAiSummaryGate receiptNumber={disclosure.receiptNumber} alreadyUsed={aiAccess === "SIGN_IN"} ageRequired={aiAccess === "MEMBER_AGE_REQUIRED" || aiAccess === "GUEST_AGE_REQUIRED"} member={aiAccess === "MEMBER_AGE_REQUIRED"} waiting={aiAccess === "GUEST_WAITING"} /> : <AiDisclosureSummaryPreview
             companyName={disclosure.company.name}
             reportName={disclosure.reportName}
             disclosedOn={disclosure.disclosedOn}
