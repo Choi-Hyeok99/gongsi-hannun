@@ -34,13 +34,14 @@ function AiQuickSummary(props: Props & Readonly<{ summary: AiDisclosureSummary }
       <div className="deep-report">
         <section className="deep-report__intro" aria-labelledby="quick-summary-heading">
           <div><h3 id="quick-summary-heading">{summary.plainSummary}</h3></div>
-          <p>{summary.whyItMatters || "공시 원문의 핵심 내용을 간단히 정리했습니다."}</p>
+          {summary.whyItMatters ? <p>{summary.whyItMatters}</p> : null}
           <dl>
             <div className="deep-report__context"><dt>기업</dt><dd>{props.companyName}</dd></div>
             <div className="deep-report__context"><dt>공시 유형</dt><dd>{props.eventTypeLabel}</dd></div>
             <div><dt>요약 생성</dt><dd>{formatKoreanTimestamp(summary.generatedAt)}</dd></div>
           </dl>
         </section>
+        <ReportExtras summary={summary} receiptNumber={props.receiptNumber} />
         <section className="deep-report__evidence" aria-labelledby="quick-summary-evidence-heading">
           <div>
             <p className="eyebrow">근거 확인</p>
@@ -81,7 +82,7 @@ function AiDeepReport(props: Props & Readonly<{ summary: AiDisclosureSummary }>)
             <h3 id="deep-report-summary-heading">{summary.plainSummary}</h3>
             <span>중요도 {importanceScore}/100</span>
           </div>
-          <p>{summary.whyItMatters || "별도의 중요성 해설이 생성되지 않았습니다."}</p>
+          {summary.whyItMatters ? <p>{summary.whyItMatters}</p> : null}
           <dl>
             <div className="deep-report__context"><dt>기업</dt><dd>{props.companyName}</dd></div>
             <div className="deep-report__context"><dt>공시 유형</dt><dd>{props.eventTypeLabel}</dd></div>
@@ -89,6 +90,8 @@ function AiDeepReport(props: Props & Readonly<{ summary: AiDisclosureSummary }>)
           </dl>
         </section>
 
+        {summary.cautions[0] ? <aside className="ai-summary-caution"><strong>먼저 확인하세요</strong><p>{summary.cautions[0]}</p></aside> : null}
+        <details className="ai-summary-details"><summary>확인할 점·주의사항·원문 근거 펼쳐보기</summary><div className="deep-report">
         <ReportList
           eyebrow="투자자 확인 항목"
           heading="이 공시에서 확인할 변화"
@@ -107,6 +110,7 @@ function AiDeepReport(props: Props & Readonly<{ summary: AiDisclosureSummary }>)
           emptyText="별도로 생성된 주의사항이 없습니다. 중요한 판단 전 원문을 확인해 주세요."
           caution
         />
+        </div></details>
 
         <section className="deep-report__evidence" aria-labelledby="deep-report-evidence-heading">
           <div>
@@ -126,6 +130,19 @@ function AiDeepReport(props: Props & Readonly<{ summary: AiDisclosureSummary }>)
       </p>
     </section>
   );
+}
+
+function ReportExtras({summary,receiptNumber}:Readonly<{summary:AiDisclosureSummary;receiptNumber:string}>) {
+  const facts=summary.verifiedFacts.filter(fact=>fact.verificationStatus==="VERIFIED");
+  if (!summary.checkpoints.length && !summary.cautions.length && !facts.length) return null;
+  return <>
+    {summary.cautions[0] ? <aside className="ai-summary-caution"><strong>먼저 확인하세요</strong><p>{summary.cautions[0]}</p></aside> : null}
+    <details className="ai-summary-details"><summary>확인할 점·주의사항·원문 근거 펼쳐보기</summary><div className="deep-report">
+      {summary.checkpoints.length ? <ReportList eyebrow="추가 해설" heading="확인할 점" badge="AI 해석" items={summary.checkpoints} emptyText="" /> : null}
+      {facts.length ? <VerifiedFacts facts={facts} receiptNumber={receiptNumber} /> : null}
+      {summary.cautions.length ? <ReportList eyebrow="판단 전 주의" heading="주의할 점" badge="주의" items={summary.cautions} emptyText="" caution /> : null}
+    </div></details>
+  </>;
 }
 
 function ReportList({ eyebrow, heading, badge, items, emptyText, caution = false }: Readonly<{
@@ -254,7 +271,7 @@ function getDocumentPendingContent(status: DisclosureDocumentCollectionStatus) {
   if (status === "FAILED") return {
     badge: "원문 수집 지연",
     title: "제출 문서 수집이 지연되고 있습니다.",
-    description: "AI 해설은 원문이 수집된 뒤 중요 공시부터 생성됩니다. 현재는 OpenDART 원문을 확인해 주세요.",
+    description: "원문이 수집되면 이 공시를 방문할 때 AI 요약을 다시 요청할 수 있습니다. 현재는 OpenDART 원문을 확인해 주세요.",
   } as const;
   return {
     badge: "원문 수집 중",

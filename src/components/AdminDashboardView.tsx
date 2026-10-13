@@ -1,6 +1,7 @@
 import Link from "next/link";
 import React from "react";
 import type { AdminDashboard } from "@/server/admin-dashboard";
+import {AdminTrafficChart} from "@/components/AdminTrafficChart";
 
 const n = (value:number|null) => value === null ? "조회 불가" : value.toLocaleString("ko-KR");
 const t = (value:string|null) => value ? new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",dateStyle:"short",timeStyle:"short"}).format(new Date(value)) : "기록 없음";
@@ -26,7 +27,8 @@ export function AdminDashboardView({data}:{data:AdminDashboard}) {
         <Metric label="최근 24시간 Worker 요청" value={data.cloudflare.worker.requests} note="페이지·API·봇·운영자 요청 포함 · 한 공시 조회가 여러 요청을 만들 수 있습니다." />
         <Metric label="최근 24시간 Worker 오류" value={data.cloudflare.worker.errors} note="Worker 실행 오류 · AI 503 응답 건수와 같지 않습니다." />
       </div>
-      {data.cloudflare.traffic.days.length ? <div className="admin-table-wrap"><table><caption>최근 7일 도메인 트래픽 (UTC 기준 · 표본 집계 가능)</caption><thead><tr><th scope="col">날짜</th><th scope="col">고유 접속 IP</th><th scope="col">페이지 조회</th><th scope="col">전체 요청</th></tr></thead><tbody>{data.cloudflare.traffic.days.map(day=><tr key={day.date}><th scope="row">{day.date}</th><td>{n(day.uniqueIps)}</td><td>{n(day.pageViews)}</td><td>{n(day.requests)}</td></tr>)}</tbody></table></div> : null}
+      {data.cloudflare.traffic.status === "CONNECTED" ? <AdminTrafficChart days={data.cloudflare.traffic.days} /> : <p className="admin-chart-empty" role="status">방문 통계를 연결하는 중입니다. 확인되지 않은 숫자나 예시 그래프는 표시하지 않습니다.</p>}
+      {data.cloudflare.traffic.days.length ? <details className="admin-details"><summary>날짜별 상세 숫자 보기</summary><div className="admin-table-wrap"><table><caption>최근 7일 도메인 트래픽 (UTC 기준 · 표본 집계 가능)</caption><thead><tr><th scope="col">날짜</th><th scope="col">고유 접속 IP</th><th scope="col">페이지 조회</th><th scope="col">전체 요청</th></tr></thead><tbody>{data.cloudflare.traffic.days.map(day=><tr key={day.date}><th scope="row">{day.date}</th><td>{n(day.uniqueIps)}</td><td>{n(day.pageViews)}</td><td>{n(day.requests)}</td></tr>)}</tbody></table></div></details> : null}
       <p className="admin-help">별도 추적 쿠키·기기 지문은 추가하지 않습니다. 날짜별 고유 IP를 더해 기간 전체의 고유 방문자 수로 계산하지 않습니다.</p>
     </section>
     <section className="info-card admin-section"><h2>AI 생성과 무료 한도</h2><p>방문 시 생성 모델: <strong>{data.model}</strong> · 저장된 요약을 다시 읽는 것은 새 생성 호출이 아닙니다.</p>
@@ -34,7 +36,7 @@ export function AdminDashboardView({data}:{data:AdminDashboard}) {
         <Metric label="오늘 생성 슬롯 사용" value={data.quota.calls} note={`사이트 안전 상한 ${data.quota.limit}회/일 · 미국 태평양 날짜 기준 · 제공사의 보장 한도가 아닙니다.`} />
         <Metric label="최근 7일 실제 생성 호출" value={data.usage.attempts} note="계측 도입 이후 실제 생성 요청만 기록 · 실패 포함 · 이전 호출은 소급 집계하지 않습니다." />
         <Metric label="누적 성공 분석 기록" value={data.counts.summaries} note="모든 분석 버전의 저장 기록 합계 · 공시 고유 수가 아닙니다." />
-        <Metric label="현재 실패 분석 기록" value={data.counts.failedAnalyses} note="재시도 성공 시 줄어들 수 있습니다. 누적 실패 호출 수와 다릅니다." />
+        <Metric label="과거 포함 미완료 분석" value={data.counts.failedAnalyses} note="과거 모델·분석 버전도 포함합니다. 현재 모델의 실패율이나 누적 실패 호출 수는 아닙니다." />
       </div>
       <p>공통 호출 차단: {!data.quota.available ? "조회 불가" : data.quota.blockedUntil && new Date(data.quota.blockedUntil)>new Date(data.updatedAt) ? `${t(data.quota.blockedUntil)}까지 대기` : "현재 차단 기록 없음"}</p>
       <div className="admin-table-wrap"><table><caption>최근 7일 생성 계측 (한국 날짜 · 도입 전 날짜에는 계측 기록이 없습니다.)</caption><thead><tr><th scope="col">날짜</th><th scope="col">생성 호출</th><th scope="col">출력 검증 통과</th></tr></thead><tbody>{data.usage.days.map(day=><tr key={day.date}><th scope="row">{day.date}</th><td>{n(day.attempts)}</td><td>{n(day.successes)}</td></tr>)}</tbody></table></div>

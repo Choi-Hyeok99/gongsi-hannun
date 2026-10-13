@@ -11,6 +11,8 @@ describe("Cloudflare read-only aggregate metrics",()=>{
       expect(String(_input)).not.toContain(env.CLOUDFLARE_ANALYTICS_API_TOKEN);
       expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${env.CLOUDFLARE_ANALYTICS_API_TOKEN}`);
       const body=JSON.parse(String(options?.body));
+      expect(body.query).toContain(": string!");
+      expect(body.query).not.toMatch(/: (String|Date)!/);
       const viewer=body.query.includes("workersInvocationsAdaptive") ? {accounts:[{workersInvocationsAdaptive:[{sum:{requests:120,errors:2}}]}]} : {zones:[{httpRequests1dGroups:[{dimensions:{date:"2026-10-14"},uniq:{uniques:8},sum:{pageViews:15,requests:90}}]}]};
       return new Response(JSON.stringify({data:{viewer},errors:null}));
     });

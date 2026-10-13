@@ -9,12 +9,12 @@ export type CloudflareAdminMetrics = Readonly<{
 }>;
 type Env = Readonly<Record<string,string|undefined>>;
 const ID = /^[0-9a-f]{32}$/i;
-const workerQuery = `query Worker($account: String!, $script: String!, $start: Time!, $end: Time!) {
+const workerQuery = `query Worker($account: string!, $script: string!, $start: string!, $end: string!) {
   viewer { accounts(filter:{accountTag:$account}) {
     workersInvocationsAdaptive(limit:1, filter:{scriptName:$script,datetime_geq:$start,datetime_leq:$end}) {sum {requests errors}}
   }}
 }`;
-const trafficQuery = `query Traffic($zone: String!, $start: Date!, $end: Date!) {
+const trafficQuery = `query Traffic($zone: string!, $start: string!, $end: string!) {
   viewer { zones(filter:{zoneTag:$zone}) {
     httpRequests1dGroups(limit:7,orderBy:[date_ASC],filter:{date_geq:$start,date_leq:$end}) {
       dimensions {date} uniq {uniques} sum {pageViews requests}
