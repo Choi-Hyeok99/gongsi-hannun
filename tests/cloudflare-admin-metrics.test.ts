@@ -43,6 +43,6 @@ describe("Cloudflare read-only aggregate metrics",()=>{
   it("classifies JSON errors even when GraphQL returns HTTP 400",async()=>{
     const warn=vi.spyOn(console,"warn").mockImplementation(()=>{});
     const data=await readCloudflareAdminMetrics(env,async()=>new Response(JSON.stringify({errors:[{message:'unknown type "String" private-sensitive-body',code:1234}]}),{status:400}));
-    expect(data.worker.reason).toBe("SCHEMA");expect(JSON.stringify(warn.mock.calls)).toContain('"field":"String"');expect(JSON.stringify(warn.mock.calls)).not.toContain("private-sensitive");warn.mockRestore();
+    expect(data.worker.reason).toBe("SCHEMA");expect(warn.mock.calls.map(call=>JSON.parse(String(call[1])))).toContainEqual(expect.objectContaining({field:"String",providerCode:1234}));expect(JSON.stringify(warn.mock.calls)).not.toContain("private-sensitive");warn.mockRestore();
   });
 });
