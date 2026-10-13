@@ -75,6 +75,10 @@ describe("GeminiDisclosureSummaryClient", () => {
   });
 
   it.each([
+    ["FAILED_PRECONDITION", "User location is not supported for the API use.", "AI_REGION_UNAVAILABLE"],
+    ["FAILED_PRECONDITION", "Gemini API free tier is not available in your country", "AI_REGION_UNAVAILABLE"],
+    ["INVALID_ARGUMENT", "Invalid JSON payload received. Unknown name responseSchema", "AI_SCHEMA_ERROR"],
+    ["PERMISSION_DENIED", "Your API key was reported as leaked", "AI_AUTH_ERROR"],
     ["INVALID_ARGUMENT", "API key not valid. Please pass a valid API key.", "AI_AUTH_ERROR"],
     ["RESOURCE_EXHAUSTED", "Quota exceeded", "AI_RATE_LIMITED"],
     ["UNAVAILABLE", "Temporary outage", "AI_PROVIDER_UNAVAILABLE"],

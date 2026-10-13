@@ -18,6 +18,10 @@ describe("on-demand client lifecycle",()=>{
     fetcher.mockResolvedValueOnce(response("WAITING",202)).mockResolvedValueOnce(response("READY"));mount();await vi.advanceTimersByTimeAsync(10_000);
     expect(fetcher).toHaveBeenCalledTimes(2);expect(mocks.refresh).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(300_000);expect(fetcher).toHaveBeenCalledTimes(2);
   });
+  it("honors the sixty-second provider cooldown without an immediate retry",async()=>{
+    fetcher.mockResolvedValueOnce({status:202,json:async()=>({status:"RETRYING",retryAfterSeconds:60})}).mockResolvedValueOnce(response("READY"));
+    mount();await vi.advanceTimersByTimeAsync(59_000);expect(fetcher).toHaveBeenCalledOnce();await vi.advanceTimersByTimeAsync(1_000);expect(fetcher).toHaveBeenCalledTimes(2);expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
   it("never retries quota exhaustion or terminal failures automatically",async()=>{
     fetcher.mockResolvedValue(response("RATE_LIMIT"));mount();await vi.advanceTimersByTimeAsync(300_000);
     expect(fetcher).toHaveBeenCalledOnce();expect(mocks.set).toHaveBeenCalledWith("RATE_LIMIT");expect(mocks.refresh).not.toHaveBeenCalled();

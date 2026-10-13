@@ -51,4 +51,13 @@ describe("visited disclosure generation",()=>{
     await expect(generateVisitedDisclosureSummary(candidate.receiptNumber,repo,provider,guard)).rejects.toThrow("database");
     expect(guard.release).toHaveBeenCalledTimes(1);
   });
+  it("waits a minute before a retryable temporary provider outage",async()=>{
+    provider.summarize.mockRejectedValue(new Error("AI_PROVIDER_UNAVAILABLE"));
+    expect(await generateVisitedDisclosureSummary(candidate.receiptNumber,repo,provider,guard)).toEqual({status:"RETRYING",retryAfterSeconds:60});
+    expect(provider.summarize).toHaveBeenCalledOnce();expect(guard.release).toHaveBeenCalledWith("lease","AI_PROVIDER_UNAVAILABLE");
+  });
+  it("does not reschedule an exhausted temporary-failure attempt",async()=>{
+    provider.summarize.mockRejectedValue(new Error("AI_PROVIDER_UNAVAILABLE"));repo.findCandidateByReceiptNumber.mockResolvedValueOnce(candidate).mockResolvedValueOnce(null);
+    expect((await generateVisitedDisclosureSummary(candidate.receiptNumber,repo,provider,guard)).status).toBe("DELAYED");
+  });
 });

@@ -5,7 +5,7 @@ import { verifyDisclosureFactCandidates } from "@/domain/ai-disclosure-facts";
 import { classifyAnalysisError } from "@/server/ai-disclosure-summary-use-cases";
 
 export type OnDemandAiResult = Readonly<{
-  status: "READY" | "WAITING" | "RATE_LIMIT" | "SOURCE_UNAVAILABLE" | "DELAYED" | "UNAVAILABLE";
+  status: "READY" | "WAITING" | "RETRYING" | "RATE_LIMIT" | "SOURCE_UNAVAILABLE" | "DELAYED" | "UNAVAILABLE";
   retryAfterSeconds?: number;
 }>;
 export interface OnDemandAiRepository extends AiAnalysisRepository {
@@ -48,6 +48,9 @@ export async function generateVisitedDisclosureSummary(
     } catch (error) {
       failure = classifyAnalysisError(error);
       await repository.fail(candidate.eventId, AI_ANALYSIS_VERSION, failure);
+      if (failure === "AI_PROVIDER_UNAVAILABLE" && await repository.findCandidateByReceiptNumber(receiptNumber, AI_ANALYSIS_VERSION)) {
+        return {status:"RETRYING",retryAfterSeconds:60};
+      }
       return {status:failure === "AI_RATE_LIMITED" ? "RATE_LIMIT" : "DELAYED"};
     }
   } finally {

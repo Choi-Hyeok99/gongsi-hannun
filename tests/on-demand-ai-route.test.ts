@@ -42,6 +42,10 @@ describe("on-demand API access",()=>{
     mocks.access.mockResolvedValue("GUEST_REQUESTED");mocks.generate.mockResolvedValue({status:"WAITING",retryAfterSeconds:10});
     expect((await POST(request(),context())).status).toBe(202);expect(mocks.set).not.toHaveBeenCalled();
   });
+  it("keeps a guest reservation during a bounded transient retry",async()=>{
+    mocks.access.mockResolvedValue("GUEST_REQUESTED");mocks.generate.mockResolvedValue({status:"RETRYING",retryAfterSeconds:60});
+    expect((await POST(request(),context())).status).toBe(202);expect(mocks.set).not.toHaveBeenCalled();
+  });
   it("never exposes raw server errors",async()=>{
     mocks.generate.mockRejectedValue(new Error("secret-value upstream"));const response=await POST(request(),context());expect(await response.text()).not.toContain("secret-value");expect(response.status).toBe(503);
   });

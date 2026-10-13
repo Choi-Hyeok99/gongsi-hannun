@@ -14,7 +14,8 @@ export class SupabaseOnDemandAiGuard implements OnDemandAiGuard {
     throw new DataAccessError("AI 호출 잠금 응답이 올바르지 않습니다.");
   }
   async release(token: string, errorCode?: string): Promise<void> {
-    const {error} = await this.client.rpc("release_on_demand_ai_slot",{p_token:token,p_error_code:errorCode ?? null});
+    const circuitCode = errorCode === "AI_REGION_UNAVAILABLE" || errorCode === "AI_SCHEMA_ERROR" ? "AI_INVALID_REQUEST" : errorCode;
+    const {error} = await this.client.rpc("release_on_demand_ai_slot",{p_token:token,p_error_code:circuitCode ?? null});
     if (error) throw new DataAccessError("AI 호출 잠금을 해제하지 못했습니다.");
   }
 }

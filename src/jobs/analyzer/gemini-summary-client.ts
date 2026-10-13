@@ -122,6 +122,10 @@ async function classifyResponse(response: Response): Promise<string> {
   const body = await response.clone().json().catch(() => null) as GeminiErrorResponse | null;
   const upstreamStatus = body?.error?.status;
   const upstreamMessage = body?.error?.message ?? "";
+  // Persist only allowlisted categories, never provider messages or credentials.
+  if (/user location is not supported|not available in your country|unsupported region/i.test(upstreamMessage)) return "AI_REGION_UNAVAILABLE";
+  if (/response[_ ]?schema|generationConfig|unknown name|invalid JSON payload|unsupported.*schema/i.test(upstreamMessage)) return "AI_SCHEMA_ERROR";
+  if (/key.*(?:leaked|blocked|restricted)/i.test(upstreamMessage)) return "AI_AUTH_ERROR";
   if (/api key not valid|api key.*invalid/i.test(upstreamMessage)) return "AI_AUTH_ERROR";
   if (upstreamStatus === "UNAUTHENTICATED" || upstreamStatus === "PERMISSION_DENIED") return "AI_AUTH_ERROR";
   if (upstreamStatus === "RESOURCE_EXHAUSTED") return "AI_RATE_LIMITED";

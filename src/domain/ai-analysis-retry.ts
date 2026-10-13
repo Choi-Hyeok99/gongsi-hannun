@@ -7,7 +7,7 @@ export function isRetryableAiAnalysis(state: AiAnalysisRetryState, now = Date.no
     return Number.isFinite(expiry) && expiry <= now && state.attemptCount < 20;
   }
   if (state.status !== "FAILED") return false;
-  if (["AI_INVALID_REQUEST", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_BILLING_REQUIRED"].includes(state.errorCode)) return false;
+  if (["AI_INVALID_REQUEST", "AI_REGION_UNAVAILABLE", "AI_SCHEMA_ERROR", "AI_AUTH_ERROR", "AI_MODEL_NOT_FOUND", "AI_BILLING_REQUIRED"].includes(state.errorCode)) return false;
   if (state.errorCode === "AI_RATE_LIMITED") {
     const previous=Date.parse(state.updatedAt ?? "");
     if (Number.isNaN(previous)) return false;

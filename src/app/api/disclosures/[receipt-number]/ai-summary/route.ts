@@ -40,7 +40,7 @@ export async function POST(request: Request, context: Context) {
         const client = createClient(environment.SUPABASE_URL,environment.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
         result = await generateVisitedDisclosureSummary(receipt,
           new SupabaseAiAnalysisRepository(client,true),
-          new GeminiDisclosureSummaryClient({apiKey:key,timeoutMs:30_000}),
+          new GeminiDisclosureSummaryClient({apiKey:key,timeoutMs:60_000,onFailure:failure=>console.warn("AI_PROVIDER_FAILURE",JSON.stringify(failure))}),
           new SupabaseOnDemandAiGuard(client));
       }
       if (result.status === "SOURCE_UNAVAILABLE" && state.status === "PROCESSING") result = {status:"WAITING",retryAfterSeconds:10};
@@ -53,9 +53,9 @@ export async function POST(request: Request, context: Context) {
       if (result.status === "READY") {
         store.set(GUEST_AI_COOKIE_NAME,createGuestAiClaim(receipt,readServerEnvironment().SUPABASE_SECRET_KEY),{...options,maxAge:GUEST_AI_COOKIE_MAX_AGE});
       }
-      if (result.status !== "WAITING") store.set(GUEST_AI_PENDING_COOKIE_NAME,"",{...options,maxAge:0});
+      if (result.status !== "WAITING" && result.status !== "RETRYING") store.set(GUEST_AI_PENDING_COOKIE_NAME,"",{...options,maxAge:0});
     }
-    return respond(result,result.status === "WAITING" ? 202 : result.status === "UNAVAILABLE" ? 503 : 200);
+    return respond(result,result.status === "WAITING" || result.status === "RETRYING" ? 202 : result.status === "UNAVAILABLE" ? 503 : 200);
   } catch {
     return respond({status:"UNAVAILABLE"},503);
   }
