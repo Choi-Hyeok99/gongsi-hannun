@@ -35,4 +35,9 @@ describe("Cloudflare read-only aggregate metrics",()=>{
       return new Response(JSON.stringify(worker ? {data:{viewer:{accounts:[{workersInvocationsAdaptive:[]}]}}} : {errors:[{message:"plan permission detail"}]}));
     });expect(data.worker.requests).toBe(0);expect(data.traffic.status).toBe("UNAVAILABLE");expect(JSON.stringify(data)).not.toContain("permission detail");
   });
+  it("classifies invalid tokens without returning or logging provider messages",async()=>{
+    const warn=vi.spyOn(console,"warn").mockImplementation(()=>{});
+    const data=await readCloudflareAdminMetrics(env,async()=>new Response(JSON.stringify({errors:[{message:"Authentication error with private-token"}]})));
+    expect(data.worker.reason).toBe("AUTH");expect(JSON.stringify(data)).not.toContain("private-token");expect(JSON.stringify(warn.mock.calls)).not.toContain("private-token");warn.mockRestore();
+  });
 });

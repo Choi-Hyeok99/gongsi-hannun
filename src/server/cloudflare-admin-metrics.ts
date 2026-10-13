@@ -2,10 +2,11 @@ import "server-only";
 import { nonNegativeCount } from "@/domain/admin-metrics";
 
 export type MetricConnection = "CONNECTED" | "NOT_CONFIGURED" | "UNAVAILABLE";
+export type AnalyticsFailureReason = "AUTH" | "PERMISSION" | "SCHEMA" | "TIME_WINDOW" | "RATE_LIMIT" | "TIMEOUT" | "NETWORK" | "UPSTREAM";
 export type TrafficDay = Readonly<{date:string;uniqueIps:number|null;pageViews:number|null;requests:number|null}>;
 export type CloudflareAdminMetrics = Readonly<{
-  worker: {status:MetricConnection;requests:number|null;errors:number|null};
-  traffic: {status:MetricConnection;days:readonly TrafficDay[]};
+  worker: {status:MetricConnection;requests:number|null;errors:number|null;reason?:AnalyticsFailureReason};
+  traffic: {status:MetricConnection;days:readonly TrafficDay[];reason?:AnalyticsFailureReason};
 }>;
 type Env = Readonly<Record<string,string|undefined>>;
 const ID = /^[0-9a-f]{32}$/i;
@@ -24,14 +25,32 @@ const trafficQuery = `query Traffic($zone: string!, $start: string!, $end: strin
 type Json = Record<string, unknown>;
 function obj(value: unknown): Json { return value && typeof value === "object" && !Array.isArray(value) ? value as Json : {}; }
 function rows(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
+class AnalyticsFailure extends Error {
+  constructor(readonly reason:AnalyticsFailureReason,readonly httpStatus=0) {super("ANALYTICS_UNAVAILABLE");}
+}
+function classifyFailureMessages(messages:readonly unknown[]):AnalyticsFailureReason {
+  const text=messages.map(value=>String(obj(value).message ?? "")).join(" ");
+  if (/authenticat|invalid.*token|invalid.*credential|invalid.*api.key/i.test(text)) return "AUTH";
+  if (/permission|not authorized|forbidden|access denied|not entitled|not allowed to access/i.test(text)) return "PERMISSION";
+  if (/time range|time window|date range|duration|older than|range.*exceed|period.*exceed/i.test(text)) return "TIME_WINDOW";
+  if (/unknown (?:type|field|argument)|cannot query|parsing|parse error|variable|undefined|invalid.*query/i.test(text)) return "SCHEMA";
+  if (/rate.limit|budget|too many/i.test(text)) return "RATE_LIMIT";
+  return "UPSTREAM";
+}
+function reportFailure(dataset:"WORKER"|"TRAFFIC",error:unknown):AnalyticsFailureReason {
+  const reason=error instanceof AnalyticsFailure ? error.reason : error instanceof Error && error.name === "TimeoutError" ? "TIMEOUT" : "NETWORK";
+  console.warn("ADMIN_ANALYTICS_FAILURE",JSON.stringify({dataset,reason,httpStatus:error instanceof AnalyticsFailure ? error.httpStatus : 0}));
+  return reason;
+}
 async function query(fetchImpl: typeof fetch, token: string, query: string, variables: Json): Promise<Json> {
   const response = await fetchImpl("https://api.cloudflare.com/client/v4/graphql",{
     method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},
     body:JSON.stringify({query,variables}),cache:"no-store",signal:AbortSignal.timeout(5000),
   });
-  if (!response.ok) throw new Error("ANALYTICS_UNAVAILABLE");
+  if (!response.ok) throw new AnalyticsFailure(response.status===401 ? "AUTH" : response.status===403 ? "PERMISSION" : response.status===429 ? "RATE_LIMIT" : "UPSTREAM",response.status);
   const body = obj(await response.json());
-  if (rows(body.errors).length || !body.data) throw new Error("ANALYTICS_UNAVAILABLE");
+  if (rows(body.errors).length) throw new AnalyticsFailure(classifyFailureMessages(rows(body.errors)),response.status);
+  if (!body.data) throw new AnalyticsFailure("UPSTREAM",response.status);
   return obj(obj(body.data).viewer);
 }
 export async function readCloudflareAdminMetrics(
@@ -58,7 +77,7 @@ export async function readCloudflareAdminMetrics(
         const requests = nonNegativeCount(sum.requests), errors = nonNegativeCount(sum.errors);
         if (requests === null || errors === null) throw new Error("ANALYTICS_UNAVAILABLE");
         return {status:"CONNECTED" as const,requests,errors};
-      } catch { return {...worker,status:"UNAVAILABLE" as const}; }
+      } catch (error) { return {...worker,status:"UNAVAILABLE" as const,reason:reportFailure("WORKER",error)}; }
     })() : Promise.resolve(worker),
     zone && ID.test(zone) ? (async () => {
       try {
@@ -73,7 +92,7 @@ export async function readCloudflareAdminMetrics(
         });
         if (days.some(day=>!/^\d{4}-\d{2}-\d{2}$/.test(day.date) || day.uniqueIps === null || day.pageViews === null || day.requests === null)) throw new Error("ANALYTICS_UNAVAILABLE");
         return {status:"CONNECTED" as const,days};
-      } catch { return {...traffic,status:"UNAVAILABLE" as const}; }
+      } catch (error) { return {...traffic,status:"UNAVAILABLE" as const,reason:reportFailure("TRAFFIC",error)}; }
     })() : Promise.resolve(traffic),
   ]);
   return {worker:workerResult,traffic:trafficResult};
