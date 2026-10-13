@@ -86,11 +86,13 @@ export class GeminiDisclosureSummaryClient implements AiDisclosureSummaryProvide
       );
       if (!response.ok) await this.rejectResponse(response);
       const body = await response.json() as GeminiResponse;
-      if (body.usageMetadata) this.onUsage?.({
-        inputTokens: body.usageMetadata.promptTokenCount ?? 0,
-        outputTokens: Math.max(body.usageMetadata.candidatesTokenCount ?? 0, (body.usageMetadata.totalTokenCount ?? 0) - (body.usageMetadata.promptTokenCount ?? 0)),
-        totalTokens: body.usageMetadata.totalTokenCount ?? 0,
-      });
+      const input = body.usageMetadata?.promptTokenCount;
+      const total = body.usageMetadata?.totalTokenCount;
+      // Incomplete provider usage is unknown, not a zero-cost request.
+      if (typeof input === "number" && Number.isSafeInteger(input) && input >= 0
+        && typeof total === "number" && Number.isSafeInteger(total) && total >= input) {
+        this.onUsage?.({inputTokens:input,outputTokens:total-input,totalTokens:total});
+      }
       const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
       if (!text) throw new Error("AI_INVALID_RESPONSE");
       const parsedJson: unknown = JSON.parse(text);

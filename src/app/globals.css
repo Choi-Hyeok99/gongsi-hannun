@@ -824,3 +824,27 @@ h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); line-height: 1.3; letter-spac
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }
 }
+/* Operator-only dashboard, scoped to avoid changing existing market screens. */
+.admin-dashboard { display:grid; gap:24px; }
+.admin-intro { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.admin-intro .secondary-button { white-space:nowrap; }
+.admin-metrics-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.admin-metric h2 { font-size:14px; margin:0 0 12px; }
+.admin-metric strong { font-size:30px; font-variant-numeric:tabular-nums; }
+.admin-metric p,.admin-help { font-size:13px; line-height:1.7; opacity:.8; }
+.admin-section { min-width:0; }
+.admin-section > h2 { margin-bottom:12px; }
+.admin-section > p { line-height:1.8; }
+.admin-section .admin-metrics-grid { margin:18px 0; }
+.admin-table-wrap { overflow-x:auto; margin:20px 0; }
+.admin-table-wrap table { border-collapse:collapse; width:100%; min-width:420px; font-size:14px; }
+.admin-table-wrap caption { text-align:left; margin-bottom:12px; line-height:1.6; }
+.admin-table-wrap th,.admin-table-wrap td { text-align:left; padding:12px; border-bottom:1px solid var(--border, #d8dfe8); }
+.admin-table-wrap td { font-variant-numeric:tabular-nums; }
+.admin-bottom-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.admin-status-list { list-style:none; padding:0; }
+.admin-status-list li { display:flex; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--border, #d8dfe8); font-size:14px; }
+.admin-status-list small { display:block; margin-top:6px; opacity:.7; overflow-wrap:anywhere; }
+.admin-status-list time { flex-shrink:0; font-size:12px; }
+@media(max-width:1000px) { .admin-metrics-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .admin-bottom-grid { grid-template-columns:1fr; } .admin-metrics-grid { grid-template-columns:1fr; } .admin-intro { flex-direction:column; } .admin-status-list li { flex-direction:column; gap:6px; } .admin-section .company-facts > div { overflow-wrap:anywhere; } }

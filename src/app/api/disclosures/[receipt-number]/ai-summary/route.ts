@@ -5,7 +5,8 @@ import { findAiDisclosureSummaryState } from "@/data/server-ai-analysis-reposito
 import { SupabaseAiAnalysisRepository } from "@/data/supabase-ai-analysis-repository";
 import { SupabaseOnDemandAiGuard } from "@/data/supabase-on-demand-ai-guard";
 import { createGuestAiClaim, GUEST_AI_COOKIE_MAX_AGE, GUEST_AI_COOKIE_NAME, GUEST_AI_PENDING_COOKIE_NAME, isReceiptNumber } from "@/domain/guest-ai-access";
-import { GeminiDisclosureSummaryClient } from "@/jobs/analyzer/gemini-summary-client";
+import { MeasuredGeminiProvider } from "@/jobs/analyzer/measured-gemini-provider";
+import { recordAiUsage } from "@/data/ai-usage-recorder";
 import { readGuestAiAccess } from "@/server/guest-ai-access";
 import { readServerEnvironment } from "@/server/env";
 import { readOnDemandAiModel } from "@/server/on-demand-ai-env";
@@ -41,7 +42,7 @@ export async function POST(request: Request, context: Context) {
         const client = createClient(environment.SUPABASE_URL,environment.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
         result = await generateVisitedDisclosureSummary(receipt,
           new SupabaseAiAnalysisRepository(client,true),
-          new GeminiDisclosureSummaryClient({apiKey:key,model:readOnDemandAiModel(),timeoutMs:60_000,onFailure:failure=>console.warn("AI_PROVIDER_FAILURE",JSON.stringify(failure))}),
+          new MeasuredGeminiProvider({apiKey:key,model:readOnDemandAiModel(),timeoutMs:60_000,onFailure:failure=>console.warn("AI_PROVIDER_FAILURE",JSON.stringify(failure))},measurement=>recordAiUsage(client,measurement)),
           new SupabaseOnDemandAiGuard(client));
       }
       if (result.status === "SOURCE_UNAVAILABLE" && state.status === "PROCESSING") result = {status:"WAITING",retryAfterSeconds:10};

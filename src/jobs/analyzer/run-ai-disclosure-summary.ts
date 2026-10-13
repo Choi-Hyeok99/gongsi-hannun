@@ -3,6 +3,9 @@ import { analyzePendingDisclosures } from "@/server/ai-disclosure-summary-use-ca
 import { readAiAnalysisEnvironment } from "@/server/ai-env";
 import { AI_ANALYSIS_VERSION } from "@/domain/ai-analysis-version";
 import { GeminiDisclosureSummaryClient } from "./gemini-summary-client";
+import { MeasuredGeminiProvider } from "./measured-gemini-provider";
+import { createClient } from "@supabase/supabase-js";
+import { recordAiUsage } from "@/data/ai-usage-recorder";
 
 const GEMINI_INPUT_USD_PER_MILLION_TOKENS = 0.3;
 const GEMINI_OUTPUT_USD_PER_MILLION_TOKENS = 2.5;
@@ -11,17 +14,20 @@ async function main() {
   const environment = readAiAnalysisEnvironment();
   let inputTokens = 0;
   let outputTokens = 0;
-  const client = new GeminiDisclosureSummaryClient({
+  const options = {
     apiKey: environment.GEMINI_API_KEY,
     model: environment.GEMINI_MODEL,
-    onFailure: ({ code, httpStatus }) => console.error(
+    onFailure: ({ code, httpStatus }: {code:string;httpStatus:number}) => console.error(
       `AI 제공자 진단: ${code} (HTTP ${httpStatus})`,
     ),
-    onUsage: (usage) => {
+    onUsage: (usage: {inputTokens:number;outputTokens:number}) => {
       inputTokens += usage.inputTokens;
       outputTokens += usage.outputTokens;
     },
-  });
+  };
+  const client = new GeminiDisclosureSummaryClient(options);
+  const metricsClient = createClient(environment.SUPABASE_URL,environment.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+  const measured = new MeasuredGeminiProvider(options,measurement=>recordAiUsage(metricsClient,measurement));
   await client.assertAvailable();
   console.log(`AI 제공자 사전 점검 완료: google/${client.modelName}`);
   if (process.argv.includes("--probe")) return;
@@ -31,7 +37,7 @@ async function main() {
       supabaseSecretKey: environment.SUPABASE_SECRET_KEY,
       corporateFactsOnly: true,
     }),
-    client,
+    measured,
     {
       limit: environment.AI_ANALYSIS_LIMIT,
       analysisVersion: AI_ANALYSIS_VERSION,
