@@ -13,7 +13,7 @@ export function isRetryableAiAnalysis(state: AiAnalysisRetryState, now = Date.no
     if (Number.isNaN(previous)) return false;
     return pacificDay(previous) < pacificDay(now);
   }
-  if (state.errorCode === "AI_UPSTREAM_ERROR") return state.attemptCount < 4;
+  if (["AI_UPSTREAM_ERROR", "AI_TIMEOUT", "AI_PROVIDER_UNAVAILABLE"].includes(state.errorCode)) return state.attemptCount < 4;
   return state.attemptCount < 2;
 }
 

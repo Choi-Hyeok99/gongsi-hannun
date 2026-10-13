@@ -103,13 +103,24 @@ describe("GeminiDisclosureSummaryClient", () => {
       fetchImpl: async () => new Response(JSON.stringify({error:{status:"RESOURCE_EXHAUSTED",message:"credential=do-not-log"}}),{status:429}),
     });
     await expect(client.summarize(candidate)).rejects.toThrow("AI_RATE_LIMITED");
-    expect(onFailure).toHaveBeenCalledWith({code:"AI_RATE_LIMITED",httpStatus:429});
+    expect(onFailure).toHaveBeenCalledWith(expect.objectContaining({code:"AI_RATE_LIMITED",httpStatus:429}));
     expect(JSON.stringify(onFailure.mock.calls)).not.toContain("credential");
   });
 
   it("classifies HTTP 402 as a billing failure even with RESOURCE_EXHAUSTED in the body", async () => {
     const client = new GeminiDisclosureSummaryClient({apiKey:"secret-api-key-value-123",fetchImpl:async()=>new Response(JSON.stringify({error:{status:"RESOURCE_EXHAUSTED"}}),{status:402})});
     await expect(client.summarize(candidate)).rejects.toThrow("AI_BILLING_REQUIRED");
+  });
+  it("trims copied key whitespace without exposing its value",async()=>{
+    const client=new GeminiDisclosureSummaryClient({apiKey:"  secret-api-key-value-123\n",fetchImpl:async(_input,request)=>{
+      expect(new Headers(request?.headers).get("x-goog-api-key")).toBe("secret-api-key-value-123");
+      return new Response(JSON.stringify({candidates:[{content:{parts:[{text:JSON.stringify(validSummary)}]}}]}));
+    }});await client.summarize(candidate);
+  });
+  it("distinguishes local fetch failures from upstream HTTP rejection",async()=>{
+    const onFailure=vi.fn();const client=new GeminiDisclosureSummaryClient({apiKey:"secret",onFailure,fetchImpl:async()=>{throw new TypeError("Header ByteString contained an invalid character: secret");}});
+    await expect(client.summarize(candidate)).rejects.toThrow("AI_PROVIDER_UNAVAILABLE");
+    expect(onFailure).toHaveBeenCalledWith({code:"AI_PROVIDER_UNAVAILABLE",httpStatus:0,reason:"INVALID_HEADER"});expect(JSON.stringify(onFailure.mock.calls)).not.toContain("secret");
   });
 
   it("includes thinking tokens in billable output usage", async () => {
