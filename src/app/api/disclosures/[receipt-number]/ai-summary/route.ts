@@ -8,6 +8,7 @@ import { createGuestAiClaim, GUEST_AI_COOKIE_MAX_AGE, GUEST_AI_COOKIE_NAME, GUES
 import { GeminiDisclosureSummaryClient } from "@/jobs/analyzer/gemini-summary-client";
 import { readGuestAiAccess } from "@/server/guest-ai-access";
 import { readServerEnvironment } from "@/server/env";
+import { readOnDemandAiModel } from "@/server/on-demand-ai-env";
 import { generateVisitedDisclosureSummary, type OnDemandAiResult } from "@/server/on-demand-ai-use-cases";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export async function POST(request: Request, context: Context) {
         const client = createClient(environment.SUPABASE_URL,environment.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
         result = await generateVisitedDisclosureSummary(receipt,
           new SupabaseAiAnalysisRepository(client,true),
-          new GeminiDisclosureSummaryClient({apiKey:key,timeoutMs:60_000,onFailure:failure=>console.warn("AI_PROVIDER_FAILURE",JSON.stringify(failure))}),
+          new GeminiDisclosureSummaryClient({apiKey:key,model:readOnDemandAiModel(),timeoutMs:60_000,onFailure:failure=>console.warn("AI_PROVIDER_FAILURE",JSON.stringify(failure))}),
           new SupabaseOnDemandAiGuard(client));
       }
       if (result.status === "SOURCE_UNAVAILABLE" && state.status === "PROCESSING") result = {status:"WAITING",retryAfterSeconds:10};
