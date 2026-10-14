@@ -45,4 +45,28 @@ describe("Cloudflare read-only aggregate metrics",()=>{
     const data=await readCloudflareAdminMetrics(env,async()=>new Response(JSON.stringify({errors:[{message:'unknown type "String" private-sensitive-body',code:1234}]}),{status:400}));
     expect(data.worker.reason).toBe("SCHEMA");expect(warn.mock.calls.map(call=>JSON.parse(String(call[1])))).toContainEqual(expect.objectContaining({field:"String",providerCode:1234}));expect(JSON.stringify(warn.mock.calls)).not.toContain("private-sensitive");warn.mockRestore();
   });
+  it("uses only the credential from a copied Bearer header",async()=>{
+    const token="test-token-"+"a".repeat(32);
+    const fetcher=vi.fn(async(_url:unknown,options?:RequestInit)=>{
+      expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${token}`);
+      return new Response(JSON.stringify({data:{viewer:{accounts:[{workersInvocationsAdaptive:[]}],zones:[{httpRequests1dGroups:[]}]}}}));
+    });
+    const data=await readCloudflareAdminMetrics({...env,CLOUDFLARE_ANALYTICS_API_TOKEN:`curl https://api.cloudflare.com/client/v4/user/tokens/verify --header "Authorization: Bearer ${token}"`},fetcher);
+    expect(data.worker.status).toBe("CONNECTED");expect(data.traffic.status).toBe("CONNECTED");expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+  it("verifies rejected credentials once for both datasets and logs no credential or provider body",async()=>{
+    const info=vi.spyOn(console,"info").mockImplementation(()=>{});
+    const warn=vi.spyOn(console,"warn").mockImplementation(()=>{});
+    try {
+      const fetcher=vi.fn(async(url:unknown)=>String(url).endsWith("/user/tokens/verify")
+        ? new Response(JSON.stringify({result:{status:"active",id:"private-provider-id"}}))
+        : new Response(JSON.stringify({errors:[{message:"Authentication error private-provider-body"}]}),{status:400}));
+      const data=await readCloudflareAdminMetrics(env,fetcher);
+      expect(fetcher).toHaveBeenCalledTimes(3);
+      expect(data.worker.reason).toBe("AUTH");expect(data.traffic.reason).toBe("AUTH");
+      expect(info.mock.calls).toContainEqual(["ADMIN_ANALYTICS_TOKEN_STATE",JSON.stringify({state:"ACTIVE",httpStatus:200})]);
+      const output=JSON.stringify([data,info.mock.calls,warn.mock.calls]);
+      expect(output).not.toContain(env.CLOUDFLARE_ANALYTICS_API_TOKEN);expect(output).not.toContain("private-provider");
+    } finally {info.mockRestore();warn.mockRestore();}
+  });
 });
