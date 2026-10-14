@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { deleteAccount } from "./actions";
+import { isAdminUser } from "@/domain/admin-access";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "내 정보 | 공시한눈" };
@@ -45,6 +46,7 @@ export default async function AccountPage({ searchParams }: Props) {
           <p>계정과 개인화 설정을 한곳에서 확인할 수 있습니다.</p>
         </section>
         <AuthMessage error={status.error} message={status.message} />
+        {isAdminUser(user.id,process.env.ADMIN_USER_IDS) ? <p><Link className="secondary-button" href="/admin" prefetch={false}>운영 대시보드 →</Link></p> : null}
         <div className="account-grid">
           <section className="info-card" aria-labelledby="account-profile-heading">
             <h2 id="account-profile-heading">계정 정보</h2>

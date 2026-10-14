@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { readPublicSupabaseEnvironment } from "./config";
 import { hasRequiredPolicyConsents } from "@/server/consent";
+import { isAdminUser } from "@/domain/admin-access";
 
 const PUBLIC_PATHS = new Set([
   "/terms", "/privacy", "/consent", "/login", "/signup",
@@ -31,7 +32,25 @@ export async function refreshAuthSession(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
+  const adminApi = path === "/api/admin" || path.startsWith("/api/admin/");
+  const adminPage = path === "/admin" || path.startsWith("/admin/");
+  if (adminApi || adminPage) {
+    if (error || !user || !isAdminUser(user.id,process.env.ADMIN_USER_IDS)) {
+      const destination = request.nextUrl.clone();
+      destination.pathname = "/login";
+      destination.search = "?next=%2Fadmin";
+      const denied = adminApi
+        ? NextResponse.json({error:"접근 권한이 없습니다."},{status:error || !user ? 401 : 403})
+        : error || !user ? NextResponse.redirect(destination) : new NextResponse("페이지를 찾을 수 없습니다.",{status:404});
+      denied.headers.set("Cache-Control","private, no-store, max-age=0");
+      denied.headers.set("X-Robots-Tag","noindex, nofollow");
+      denied.headers.set("Vary","Cookie");
+      response.cookies.getAll().forEach(cookie=>denied.cookies.set(cookie));
+      return denied;
+    }
+  }
   if (user && shouldCheckConsent(request) && !await hasRequiredPolicyConsents(supabase, user.id)) {
     const destination = request.nextUrl.clone();
     destination.pathname = "/consent";

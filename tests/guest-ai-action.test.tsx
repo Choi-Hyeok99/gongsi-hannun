@@ -65,4 +65,22 @@ describe("guest AI action", () => {
     expect(used).toContain("무료 회원가입");
     expect(used).toContain("%2Fdisclosures%2F20260909800113");
   });
+  it.each([false,true])("uses an explicit one-click declaration without checkbox for member=%s",member=>{
+    const markup=renderToStaticMarkup(<GuestAiSummaryGate receiptNumber={first} alreadyUsed={false} ageRequired member={member}/>);
+    expect(markup).not.toContain('type="checkbox"');
+    expect(markup).not.toMatch(/<input[^>]*name="aiAdultConfirmed"/);
+    expect(markup).toMatch(/<button(?=[^>]*name="aiAdultConfirmed")(?=[^>]*value="on")[^>]*>/);
+    expect(markup).toContain("만 18세 이상입니다 · 요약 보기");
+    expect(markup).toContain('aria-describedby="ai-age-notice"');
+    expect(markup).toContain("요약에는 오류가 있을 수 있으니");
+  });
+  it("does not declare age again when a signed confirmation already exists",async()=>{
+    mocks.get.mockImplementation((name:string)=>name===AI_AGE_COOKIE_NAME?{value:createAiAgeClaim("guest-test-secret")}:undefined);
+    mocks.getUser.mockResolvedValue({data:{user:{id:"member"}}});
+    const data=form(first);data.delete("aiAdultConfirmed");
+    await expect(openGuestAiSummary(data)).rejects.toThrow(`#ai-summary-heading`);
+    expect(mocks.set).not.toHaveBeenCalled();
+    const markup=renderToStaticMarkup(<GuestAiSummaryGate receiptNumber={first} alreadyUsed={false}/>);
+    expect(markup).not.toContain('name="aiAdultConfirmed"');
+  });
 });

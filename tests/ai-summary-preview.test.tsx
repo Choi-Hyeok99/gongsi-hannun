@@ -102,6 +102,11 @@ describe("AiDisclosureSummaryPreview", () => {
     expect(markup).toContain("수집된 문서 보기");
     expect(markup).not.toContain("투자자 확인 항목");
   });
+  it("offers real additional analysis for a compact summary without hiding its first caution",()=>{
+    const summary={plainSummary:"실제 요약",whyItMatters:"",checkpoints:["원문 계약 조건 확인"],cautions:["정정 가능성 확인"],importanceScore:40,generatedAt:"2026-10-14T00:00:00Z",verifiedFacts:[]};
+    const markup=renderToStaticMarkup(<AiDisclosureSummaryPreview {...baseProps} state={{status:"READY",summary}} />);
+    expect(markup).toContain("먼저 확인하세요");expect(markup).toContain("정정 가능성 확인");expect(markup).toContain("<details");expect(markup).toContain("원문 계약 조건 확인");expect(markup).not.toContain("별도의 중요성 해설");
+  });
 });
 
 function expectNoFabricatedAnalysis(markup: string): void {
