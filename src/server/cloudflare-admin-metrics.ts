@@ -1,5 +1,6 @@
 import "server-only";
 import { nonNegativeCount } from "@/domain/admin-metrics";
+import {normalizeAnalyticsToken} from "@/domain/cloudflare-analytics-token";
 
 export type MetricConnection = "CONNECTED" | "NOT_CONFIGURED" | "UNAVAILABLE";
 export type AnalyticsFailureReason = "AUTH" | "PERMISSION" | "SCHEMA" | "TIME_WINDOW" | "RATE_LIMIT" | "TIMEOUT" | "NETWORK" | "UPSTREAM";
@@ -64,13 +65,31 @@ async function query(fetchImpl: typeof fetch, token: string, query: string, vari
 export async function readCloudflareAdminMetrics(
   env: Env = process.env, fetchImpl: typeof fetch = fetch, now = new Date(),
 ): Promise<CloudflareAdminMetrics> {
-  const token = env.CLOUDFLARE_ANALYTICS_API_TOKEN?.trim();
+  const configuredToken = env.CLOUDFLARE_ANALYTICS_API_TOKEN;
+  const normalized = configuredToken ? normalizeAnalyticsToken(configuredToken) : null;
+  const token = normalized?.token;
   const account = env.CLOUDFLARE_ANALYTICS_ACCOUNT_ID?.trim();
   const zone = env.CLOUDFLARE_ANALYTICS_ZONE_ID?.trim();
   const script = env.CLOUDFLARE_ANALYTICS_WORKER_NAME?.trim() || "gongsi-hannun";
   const worker: CloudflareAdminMetrics["worker"] = {status:"NOT_CONFIGURED",requests:null,errors:null};
   const traffic: CloudflareAdminMetrics["traffic"] = {status:"NOT_CONFIGURED",days:[]};
   if (!token) return {worker,traffic};
+  console.info("ADMIN_ANALYTICS_TOKEN_FORMAT",JSON.stringify({format:normalized!.format}));
+  let verification:Promise<"ACTIVE"|"REJECTED"|"UNAVAILABLE">|undefined;
+  const verifyToken = () => verification ??= (async()=>{
+    try {
+      const response=await fetchImpl("https://api.cloudflare.com/client/v4/user/tokens/verify",{headers:{Authorization:`Bearer ${token}`},cache:"no-store",signal:AbortSignal.timeout(5000)});
+      const body=obj(await response.json().catch(()=>null));
+      const state=response.ok && obj(body.result).status==="active" ? "ACTIVE" : [400,401].includes(response.status) ? "REJECTED" : "UNAVAILABLE";
+      console.info("ADMIN_ANALYTICS_TOKEN_STATE",JSON.stringify({state,httpStatus:response.status}));
+      return state;
+    } catch {return "UNAVAILABLE";}
+  })();
+  const fail = async (dataset:"WORKER"|"TRAFFIC",error:unknown) => {
+    const reason=reportFailure(dataset,error);
+    if(reason==="AUTH")await verifyToken();
+    return reason;
+  };
   const [workerResult,trafficResult] = await Promise.all([
     account && ID.test(account) && /^[a-z0-9_-]{1,63}$/.test(script) ? (async () => {
       try {
@@ -85,7 +104,7 @@ export async function readCloudflareAdminMetrics(
         const requests = nonNegativeCount(sum.requests), errors = nonNegativeCount(sum.errors);
         if (requests === null || errors === null) throw new Error("ANALYTICS_UNAVAILABLE");
         return {status:"CONNECTED" as const,requests,errors};
-      } catch (error) { return {...worker,status:"UNAVAILABLE" as const,reason:reportFailure("WORKER",error)}; }
+      } catch (error) { return {...worker,status:"UNAVAILABLE" as const,reason:await fail("WORKER",error)}; }
     })() : Promise.resolve(worker),
     zone && ID.test(zone) ? (async () => {
       try {
@@ -100,7 +119,7 @@ export async function readCloudflareAdminMetrics(
         });
         if (days.some(day=>!/^\d{4}-\d{2}-\d{2}$/.test(day.date) || day.uniqueIps === null || day.pageViews === null || day.requests === null)) throw new Error("ANALYTICS_UNAVAILABLE");
         return {status:"CONNECTED" as const,days};
-      } catch (error) { return {...traffic,status:"UNAVAILABLE" as const,reason:reportFailure("TRAFFIC",error)}; }
+      } catch (error) { return {...traffic,status:"UNAVAILABLE" as const,reason:await fail("TRAFFIC",error)}; }
     })() : Promise.resolve(traffic),
   ]);
   return {worker:workerResult,traffic:trafficResult};
